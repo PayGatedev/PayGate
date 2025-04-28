@@ -1,14 +1,8 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 
 const ConnectWalletButton: React.FC = () => {
   const { connected, connect, disconnect, publicKey } = useWallet();
-
-  useEffect(() => {
-    if (connected) {
-      console.log('Wallet connected:', publicKey?.toBase58());
-    }
-  }, [connected, publicKey]);
 
   return (
     <div className="flex flex-col items-center space-y-4">
