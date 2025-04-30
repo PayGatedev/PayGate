@@ -1,13 +1,30 @@
-import { Connection, Keypair, PublicKey, Transaction } from '@solana/web3.js';
-import { mintNFT } from '@metaplex-foundation/js';
+import { Connection, clusterApiUrl, Keypair, PublicKey } from '@solana/web3.js';
+import { bundlrStorage, Metaplex, keypairIdentity } from '@metaplex-foundation/js';
 
-const connection = new Connection(process.env.REACT_APP_SOLANA_RPC_URL!, 'confirmed');
+// Створюємо підключення
+const connection = new Connection(clusterApiUrl('devnet')); // або свій RPC
+const metaplex = Metaplex.make(connection)
+  .use(keypairIdentity(Keypair.generate())) // замінити на реального користувача
+  .use(bundlrStorage());
 
-export const mintNFT = async (publicKey: PublicKey) => {
-  const payer = Keypair.generate(); // Замінити на власний гаманець
-  const tx = new Transaction();
-  
-  // Реалізуйте логіку minting NFT
+export const mintNFT = async (ownerPublicKey: PublicKey) => {
+  try {
+    const { nft } = await metaplex.nfts().create({
+      uri: "https://arweave.net/your-metadata-uri", // Тут має бути URI метаданих (JSON-файл)
+      name: "My NFT",
+      sellerFeeBasisPoints: 500, // 5% royalty
+      symbol: "MYNFT",
+      creators: [
+        {
+          address: ownerPublicKey,
+          verified: false,
+          share: 100,
+        },
+      ],
+    });
 
-  await connection.sendTransaction(tx, [payer]);
+    console.log('NFT minted:', nft);
+  } catch (error) {
+    console.error('Error minting NFT:', error);
+  }
 };
