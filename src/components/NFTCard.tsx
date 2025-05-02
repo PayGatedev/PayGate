@@ -1,15 +1,27 @@
-import React from 'react';
+import React from 'react'
 
-const NFTCard: React.FC = () => {
+type NFTCardProps = {
+  name: string
+  image: string
+  description: string
+  mintAddress: string
+}
+
+const NFTCard: React.FC<NFTCardProps> = ({ name, image, description, mintAddress }) => {
   return (
-    <div className="bg-white shadow-md rounded-lg p-6 mt-4">
-      <h2 className="text-xl font-semibold">Your NFT</h2>
-      <p className="text-gray-700 mt-2">This is the NFT you received after subscribing!</p>
-      <div className="mt-4 bg-gray-100 p-4 rounded-lg">
-        <p className="text-gray-500">NFT Content Preview</p>
+    <div className="bg-white p-4 rounded-lg shadow-md hover:shadow-lg transition-all cursor-pointer">
+      <img src={image} alt={name} className="w-full h-48 object-cover rounded-md" />
+      <div className="mt-4">
+        <h3 className="text-lg font-semibold">{name}</h3>
+        <p className="text-gray-500 mt-2">{description}</p>
+      </div>
+      <div className="mt-4">
+        <a href={`https://explorer.solana.com/address/${mintAddress}`} target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">
+          View on Explorer
+        </a>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default NFTCard;
+export default NFTCard

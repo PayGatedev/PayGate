@@ -1,34 +1,25 @@
-import React, { useState } from 'react';
-import { useWallet } from '@solana/wallet-adapter-react';
-import { mintNFT } from '../utils/solana';
+// components/SubscribeButton.tsx
+import { useWallet } from '@solana/wallet-adapter-react'
+import { FC } from 'react'
 
-const SubscribeButton: React.FC = () => {
-  const { connected, publicKey } = useWallet();
-  const [loading, setLoading] = useState(false);
+interface Props {
+  creatorAddress: string
+  onSubscribe: () => void
+}
 
-  const handleSubscribe = async () => {
-    if (!connected) return;
-    setLoading(true);
-    try {
-      await mintNFT(publicKey!);
-      alert('Successfully subscribed and NFT minted!');
-    } catch (error) {
-      console.error(error);
-      alert('An error occurred during subscription.');
-    } finally {
-      setLoading(false);
-    }
-  };
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const SubscribeButton: FC<Props> = (  {onSubscribe, creatorAddress}) => {
+  const { publicKey } = useWallet()
 
   return (
     <button
-      onClick={handleSubscribe}
-      disabled={loading || !connected}
-      className={`bg-blue-500 hover:bg-blue-600 text-white py-2 px-6 rounded-lg transition-all shadow-md ${loading || !connected ? 'opacity-50' : ''}`}
+      onClick={onSubscribe}
+      disabled={!publicKey}
+      className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
     >
-      {loading ? 'Processing...' : 'Subscribe'}
+      {publicKey ?  'Subscribe to'+ {creatorAddress}: 'Connect Wallet to Subscribe'}
     </button>
-  );
-};
+  )
+}
 
-export default SubscribeButton;
+export default SubscribeButton
