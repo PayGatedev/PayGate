@@ -12,6 +12,7 @@ const CreatorProfileWrapper = () => {
 };
 const App = () => {
   return (
+  
     <Router>
       <header className="flex justify-between p-4 border-b">
         <h1 className="text-xl font-bold">PayGate</h1>

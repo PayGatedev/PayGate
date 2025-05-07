@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
+import ConnectWallet from '../components/ConnectWallet';
 
 const Home: React.FC = () => {
   const wallet = useWallet();
@@ -51,6 +52,10 @@ const Home: React.FC = () => {
   return (
     <div className="container mx-auto p-6">
       <h1 className="text-2xl font-bold mb-4">Subscribe to Premium Content</h1>
+
+    
+        <ConnectWallet />
+ 
 
       {success ? (
         <div className="bg-green-100 text-green-800 p-4 rounded">
