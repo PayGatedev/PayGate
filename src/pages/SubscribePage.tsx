@@ -1,5 +1,6 @@
 // src/pages/SubscribePage.tsx
 
+import ConnectWallet from "../components/ConnectWallet";
 import SubscriptionForm from "../components/SubscriptionForm";
 
 const SubscribePage = () => {
@@ -8,6 +9,7 @@ const SubscribePage = () => {
       <div className="max-w-md w-full p-8 bg-gray-800 rounded-lg shadow-lg">
         <h1 className="text-3xl font-bold mb-6 text-center">Subscribe to Creator</h1>
         <SubscriptionForm />
+        <ConnectWallet />
       </div>
     </div>
   );
