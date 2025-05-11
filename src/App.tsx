@@ -14,17 +14,12 @@ const App = () => {
   return (
   
     <Router>
-      <header className="flex justify-between p-4 border-b">
-        <h1 className="text-xl font-bold">PayGate</h1>
-      </header>
-      <main className="p-4">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/creator/:address" element={<CreatorProfileWrapper />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/subscription" element={<Subscription />} />
         </Routes>
-      </main>
     </Router>
   )
 }
