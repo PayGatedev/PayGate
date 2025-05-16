@@ -1,6 +1,6 @@
 // src/pages/SubscribePage.tsx
 
-import ConnectWallet from "../components/ConnectWallet";
+import ConnectWallet from "../components/wallet-button";
 import SubscriptionForm from "../components/SubscriptionForm";
 
 const SubscribePage = () => {

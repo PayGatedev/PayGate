@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { getNFTsByCreator } from '../utilits/solanaUtils'; // Використовуємо вже існуючу функцію
 import { NFTItem } from '../utilits/types';
-import ConnectWallet from '../components/ConnectWallet';
+import { WalletButton } from '../components/wallet-button';
 
 const Profile: React.FC = () => {
   const wallet = useWallet();
@@ -43,7 +43,7 @@ const Profile: React.FC = () => {
       ) : (
         <>
         <p>Please connect your wallet to view your profile.</p>
-        <ConnectWallet />
+        <WalletButton />
         </>
       )}
     </div>

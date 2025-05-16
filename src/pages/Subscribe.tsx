@@ -2,7 +2,7 @@ import React from 'react';
 import SubscribeButton from '../components/SubscribeButton';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
-import ConnectWallet from '../components/ConnectWallet';
+import ConnectWallet from '../components/wallet-button';
 
 const Subscribe: React.FC = () => {
   const creatorAddress = 'введи_тут_адресу_твórcя'; // TODO: динамічно або хардкодом

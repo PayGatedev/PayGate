@@ -1,49 +1,79 @@
-"use client";
+"use client"
 
-import React, { FC, ReactNode, useMemo } from "react";
-import {
-  ConnectionProvider,
-  WalletProvider
-} from "@solana/wallet-adapter-react";
-import { WalletAdapterNetwork } from "@solana/wallet-adapter-base";
-import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
-import { clusterApiUrl } from "@solana/web3.js";
-import "@solana/wallet-adapter-react-ui/styles.css";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react"
+import { Connection, type PublicKey, clusterApiUrl } from "@solana/web3.js"
+import { PhantomWalletAdapter, SolflareWalletAdapter } from "@solana/wallet-adapter-wallets"
+import { ConnectionProvider, WalletProvider, useWallet } from "@solana/wallet-adapter-react"
+import { WalletModalProvider, WalletMultiButton } from "@solana/wallet-adapter-react-ui"
+import "@solana/wallet-adapter-react-ui/styles.css"
 
-import {
-  PhantomWalletAdapter,
-  SolflareWalletAdapter,
-  TorusWalletAdapter
-} from "@solana/wallet-adapter-wallets";
+// Default to 'devnet' cluster, but can be changed to 'mainnet-beta' for production
+const network = clusterApiUrl("devnet")
 
-interface SolanaProviderProps {
-  children: ReactNode;
+// Context for custom Solana functionality
+interface SolanaContextType {
+  connection: Connection | null
+  publicKey: PublicKey | null
+  connected: boolean
+  connecting: boolean
+  disconnect: () => Promise<void>
+  walletAddress: string | null
 }
 
-export const SolanaProvider: FC<SolanaProviderProps> = ({ children }) => {
-  const network = WalletAdapterNetwork.Devnet;
-  const endpoint = useMemo(() => clusterApiUrl(network), [network]);
+const SolanaContext = createContext<SolanaContextType>({
+  connection: null,
+  publicKey: null,
+  connected: false,
+  connecting: false,
+  disconnect: async () => {},
+  walletAddress: null,
+})
 
-  const wallets = useMemo(
-    () => [
-      new PhantomWalletAdapter(),
-      new SolflareWalletAdapter(),
-      new TorusWalletAdapter(),
-    ],
-    []
-  );
+export const useSolana = () => useContext(SolanaContext)
+
+// Custom provider that combines wallet adapter with our own functionality
+function SolanaContextProvider({ children }: { children: ReactNode }) {
+  const { publicKey, connected, connecting, disconnect } = useWallet()
+  const [connection, setConnection] = useState<Connection | null>(null)
+
+  useEffect(() => {
+    const conn = new Connection(network, "confirmed")
+    setConnection(conn)
+  }, [])
+
+  const walletAddress = publicKey ? publicKey.toString() : null
 
   return (
-    <ConnectionProvider endpoint={endpoint}>
-      <WalletProvider
-        wallets={wallets}
-        autoConnect={false} // не намагаємось підключитись автоматично
-        onError={(error) => {
-          console.error("Wallet connection error:", error);
-        }}
-      >
-        <WalletModalProvider>{children}</WalletModalProvider>
+    <SolanaContext.Provider
+      value={{
+        connection,
+        publicKey,
+        connected,
+        connecting,
+        disconnect,
+        walletAddress,
+      }}
+    >
+      {children}
+    </SolanaContext.Provider>
+  )
+}
+
+// Main Solana provider that wraps the application
+export function SolanaProvider({ children }: { children: ReactNode }) {
+  // Set up supported wallet adapters
+  const wallets = [new PhantomWalletAdapter(), new SolflareWalletAdapter()]
+
+  return (
+    <ConnectionProvider endpoint={network}>
+      <WalletProvider wallets={wallets} autoConnect>
+        <WalletModalProvider>
+          <SolanaContextProvider>{children}</SolanaContextProvider>
+        </WalletModalProvider>
       </WalletProvider>
     </ConnectionProvider>
-  );
-};
+  )
+}
+
+// Export the wallet button for easy access
+export { WalletMultiButton }

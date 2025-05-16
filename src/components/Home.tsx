@@ -118,7 +118,7 @@ const Home: React.FC = () => {
       </div>
 
       {/* Animated background elements */}
-      <motion.div
+      {/* <motion.div
         className="absolute top-1/4 left-1/4 w-64 h-64 rounded-full bg-[#FF3366]/5 blur-3xl"
         animate={{
           scale: [1, 1.2, 1],
@@ -143,7 +143,7 @@ const Home: React.FC = () => {
           repeatType: "reverse",
           delay: 1,
         }}
-      />
+      /> */}
 
       {/* Navigation */}
       <motion.nav
@@ -241,7 +241,7 @@ const Home: React.FC = () => {
       {/* Hero Section */}
       <section ref={heroRef} className="relative pt-32 pb-20 min-h-screen flex items-center overflow-hidden">
         {/* Animated Circles */}
-        <motion.div
+        {/* <motion.div
           className="absolute top-1/4 left-1/4 w-64 h-64 rounded-full bg-[#FF3366]/5 blur-3xl"
           animate={{
             scale: [1, 1.2, 1],
@@ -266,7 +266,7 @@ const Home: React.FC = () => {
             repeatType: "reverse",
             delay: 1,
           }}
-        />
+        /> */}
 
         <div className="max-w-7xl mx-auto px-6 relative z-10">
           <div className="flex flex-col md:flex-row items-center">

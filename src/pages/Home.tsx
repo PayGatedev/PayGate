@@ -1,404 +1,669 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { useWallet } from "@solana/wallet-adapter-react"
-import { motion, AnimatePresence } from "framer-motion"
-import { ChevronRight, Menu, X, Wallet, ArrowRight, Users, TrendingUp } from "lucide-react"
+import { useWalletModal } from "@solana/wallet-adapter-react-ui"
+import {
+  Bell,
+  LayoutDashboard,
+  Search,
+  TrendingUp,
+  Users,
+  Video,
+  Zap,
+  HomeIcon,
+  History,
+  ThumbsUp,
+  PlaySquare,
+  Menu,
+  X,
+  ChevronDown,
+  MoreVertical,
+  FileText,
+  Headphones,
+  BookOpen,
+  Vote,
+  Coins,
+  Split,
+  Shield,
+  Clock,
+} from "lucide-react"
+import { Link } from "react-router-dom"
+import { WalletButton } from "@/components/wallet-button"
 
-const Home: React.FC = () => {
+// Mock data for the feed with all content types
+const mockFeed = [
+  {
+    id: 1,
+    type: "video",
+    title: "The Future of Decentralized Content",
+    creator: "CryptoVisionary",
+    views: "24K",
+    timeAgo: "2 days ago",
+    duration: "12:45",
+    trending: true,
+    tier: "Basic",
+    description: "Exploring how blockchain technology is revolutionizing content creation and distribution...",
+  },
+  {
+    id: 2,
+    type: "article",
+    title: "Complete Guide to NFT Collections",
+    creator: "NFT_Master",
+    views: "18K",
+    timeAgo: "5 days ago",
+    readTime: "8 min read",
+    exclusive: true,
+    tier: "Premium",
+    description: "Learn the step-by-step process to create and launch your first NFT collection on Solana...",
+  },
+  {
+    id: 3,
+    type: "podcast",
+    title: "Web3 Gaming Revolution - Episode 12",
+    creator: "GameChanger",
+    views: "12K",
+    timeAgo: "1 week ago",
+    duration: "45:18",
+    trending: true,
+    tier: "Basic",
+    description: "Discussing the latest developments in blockchain gaming and the future of play-to-earn...",
+  },
+  {
+    id: 4,
+    type: "guide",
+    title: "Tokenomics Explained: A Beginner's Guide",
+    creator: "CryptoEducator",
+    views: "31K",
+    timeAgo: "2 weeks ago",
+    chapters: "5 chapters",
+    tier: "Free",
+    description: "Understanding the economic models behind successful crypto projects...",
+  },
+  {
+    id: 5,
+    type: "video",
+    title: "Advanced Smart Contract Development",
+    creator: "BlockchainDev",
+    views: "20K",
+    timeAgo: "3 weeks ago",
+    duration: "32:43",
+    exclusive: true,
+    tier: "Premium",
+    description: "Deep dive into advanced smart contract patterns and security best practices...",
+  },
+  {
+    id: 6,
+    type: "article",
+    title: "The Complete Guide to DeFi Staking",
+    creator: "DeFi_Guru",
+    views: "15K",
+    timeAgo: "1 month ago",
+    readTime: "12 min read",
+    tier: "Basic",
+    description: "Everything you need to know about staking your assets in DeFi protocols...",
+  },
+  {
+    id: 7,
+    type: "podcast",
+    title: "Blockchain Security Best Practices",
+    creator: "SecurityExpert",
+    views: "28K",
+    timeAgo: "1 month ago",
+    duration: "52:24",
+    trending: true,
+    tier: "Premium",
+    description: "Essential security practices every blockchain developer and user should know...",
+  },
+  {
+    id: 8,
+    type: "guide",
+    title: "How to Create a DAO from Scratch",
+    creator: "DAObuilder",
+    views: "22K",
+    timeAgo: "2 months ago",
+    chapters: "8 chapters",
+    tier: "Basic",
+    description:
+      "Step-by-step instructions for building and launching your own decentralized autonomous organization...",
+  },
+  {
+    id: 9,
+    type: "video",
+    title: "NFT Marketplace Development Tutorial",
+    creator: "Web3Wizard",
+    views: "19K",
+    timeAgo: "2 months ago",
+    duration: "28:15",
+    tier: "Premium",
+    description: "Learn how to build your own NFT marketplace from scratch using Solana...",
+  },
+  {
+    id: 10,
+    type: "article",
+    title: "Revenue Splitting with Smart Contracts",
+    creator: "CryptoLawyer",
+    views: "14K",
+    timeAgo: "3 months ago",
+    readTime: "10 min read",
+    tier: "Basic",
+    description: "How to implement automatic revenue splitting for creator collaborations using smart contracts...",
+  },
+]
+
+// Mock data for trending creators
+const trendingCreators = [
+  {
+    name: "CryptoArtist",
+    subscribers: "12.5K",
+    category: "Digital Art",
+  },
+  {
+    name: "BlockchainGuru",
+    subscribers: "8.7K",
+    category: "Education",
+  },
+  {
+    name: "NFT_Collector",
+    subscribers: "5.3K",
+    category: "Collectibles",
+  },
+  {
+    name: "Web3Developer",
+    subscribers: "15.2K",
+    category: "Development",
+  },
+  {
+    name: "MetaverseExplorer",
+    subscribers: "7.8K",
+    category: "Metaverse",
+  },
+]
+
+// Mock data for active proposals
+const activeProposals = [
+  {
+    id: 1,
+    title: "Create a series on DeFi fundamentals",
+    votes: 234,
+    daysLeft: 3,
+  },
+  {
+    id: 2,
+    title: "Launch an NFT collection for subscribers",
+    votes: 187,
+    daysLeft: 5,
+  },
+  {
+    id: 3,
+    title: "Start a weekly podcast on crypto news",
+    votes: 156,
+    daysLeft: 2,
+  },
+]
+
+const UserFeed: React.FC = () => {
   const wallet = useWallet()
-  const [menuOpen, setMenuOpen] = useState(false)
+  const { setVisible } = useWalletModal()
+  const [activeTab, setActiveTab] = useState("home")
+  const [activeCategory, setActiveCategory] = useState("all")
+  const [notifications, setNotifications] = useState(3)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const mainContentRef = useRef<HTMLDivElement>(null)
 
-  const handleConnect = async () => {
-    try {
-      if (wallet.connected) {
-        await wallet.disconnect()
-      } else {
-        await wallet.connect()
-      }
-    } catch (error) {
-      console.error("Wallet connection error:", error)
+  const handleConnectWallet = () => {
+    if (!wallet.connected) {
+      setVisible(true)
     }
   }
 
-  const handleSubscribe = () => {
-    if (!wallet.connected || !wallet.publicKey) {
-      alert("Please connect your wallet")
-      return
+  // Function to get content type icon
+  const getContentTypeIcon = (type: string) => {
+    switch (type) {
+      case "video":
+        return <Video className="w-8 h-8 text-gray-600" />
+      case "article":
+        return <FileText className="w-8 h-8 text-gray-600" />
+      case "podcast":
+        return <Headphones className="w-8 h-8 text-gray-600" />
+      case "guide":
+        return <BookOpen className="w-8 h-8 text-gray-600" />
+      default:
+        return <Video className="w-8 h-8 text-gray-600" />
     }
-    // Subscription logic would go here
-    console.log("Subscription initiated")
   }
+
+  // Filter content based on active category
+  const filteredContent = activeCategory === "all" ? mockFeed : mockFeed.filter((item) => item.type === activeCategory)
 
   return (
-    <div className="relative min-h-screen bg-[#0A0A0B] text-white font-sans overflow-hidden">
-      {/* Enhanced Background */}
-      <div className="fixed inset-0 z-0 bg-[#0A0A0B]">
-        {/* Main gradient orbs */}
-        <div className="absolute top-0 left-0 w-full h-full overflow-hidden">
-          {/* Primary gradient - top left */}
-          <div className="absolute -top-[10%] -left-[10%] w-[50%] h-[50%] rounded-full bg-gradient-to-br from-[#FF3366]/30 to-transparent blur-[100px] opacity-60"></div>
-
-          {/* Secondary gradient - bottom right */}
-          <div className="absolute -bottom-[10%] -right-[10%] w-[50%] h-[50%] rounded-full bg-gradient-to-tl from-[#FF9933]/30 to-transparent blur-[100px] opacity-60"></div>
-
-          {/* Accent gradient - center right */}
-          <div className="absolute top-[30%] -right-[5%] w-[30%] h-[30%] rounded-full bg-gradient-to-l from-[#9933FF]/20 to-transparent blur-[80px] opacity-40"></div>
-
-          {/* Subtle grid overlay */}
-          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiMyMDIwMjAiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0aDR2MWgtNHYtMXptMC0yaDF2NGgtMXYtNHptMi0yaDF2MWgtMXYtMXptLTIgMmgtMXYxaDF2LTF6bS0yLTJoMXYxaC0xdi0xem0yLTJoMXYxaC0xdi0xem0tMiAydi0xaC0xdjFoMXptLTIgMmgtMXYxaDF2LTF6bS0yLTJoMXYxaC0xdi0xem0yLTJoMXYxaC0xdi0xem0tMiAydi0xaC0xdjFoMXptLTIgMmgtMXYxaDF2LTF6bS0yLTJoMXYxaC0xdi0xem0yLTJoMXYxaC0xdi0xem0tMiAydi0xaC0xdjFoMXptLTIgMmgtMXYxaDF2LTF6bS0yLTJoMXYxaC0xdi0xem0yLTJoMXYxaC0xdi0xem0tMiAydi0xaC0xdjFoMXptLTIgMmgtMXYxaDF2LTF6bS0yLTJoMXYxaC0xdi0xeiIvPjwvZz48L2c+PC9zdmc+')] opacity-30"></div>
-        </div>
-
-        {/* Animated floating elements */}
-        <motion.div
-          className="absolute top-[15%] left-[20%] w-4 h-4 rounded-full bg-[#FF3366]/40 blur-sm"
-          animate={{
-            y: [0, -15, 0],
-            opacity: [0.4, 0.7, 0.4],
-          }}
-          transition={{
-            duration: 4,
-            repeat: Number.POSITIVE_INFINITY,
-            repeatType: "reverse",
-          }}
-        />
-
-        <motion.div
-          className="absolute top-[35%] right-[15%] w-6 h-6 rounded-full bg-[#FF9933]/40 blur-sm"
-          animate={{
-            y: [0, 20, 0],
-            opacity: [0.3, 0.6, 0.3],
-          }}
-          transition={{
-            duration: 5,
-            repeat: Number.POSITIVE_INFINITY,
-            repeatType: "reverse",
-            delay: 1,
-          }}
-        />
-
-        <motion.div
-          className="absolute bottom-[25%] left-[30%] w-5 h-5 rounded-full bg-[#9933FF]/40 blur-sm"
-          animate={{
-            y: [0, -10, 0],
-            opacity: [0.2, 0.5, 0.2],
-          }}
-          transition={{
-            duration: 6,
-            repeat: Number.POSITIVE_INFINITY,
-            repeatType: "reverse",
-            delay: 2,
-          }}
-        />
-
-        {/* Subtle noise texture overlay */}
-        <div className="absolute inset-0 opacity-20 mix-blend-overlay bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJhIiB4PSIwIiB5PSIwIj48ZmVUdXJidWxlbmNlIHR5cGU9ImZyYWN0YWxOb2lzZSIgYmFzZUZyZXF1ZW5jeT0iLjc1IiBzdGl0Y2hUaWxlcz0ic3RpdGNoIi8+PGZlQ29sb3JNYXRyaXggdHlwZT0ic2F0dXJhdGUiIHZhbHVlcz0iMCIvPjwvZmlsdGVyPjxwYXRoIGZpbHRlcj0idXJsKCNhKSIgb3BhY2l0eT0iLjA1IiBkPSJNMCAwaDMwMHYzMDBIMHoiLz48L3N2Zz4=')]"></div>
-      </div>
-
-      {/* Navigation */}
-      <motion.nav
-        className="fixed top-0 left-0 right-0 z-50 px-6 py-4 transition-all duration-300 backdrop-blur-md bg-[#0A0A0B]/60"
-        initial={{ y: -100, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-      >
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
+    <div className="h-screen flex flex-col bg-[#0F1116] text-white font-sans overflow-hidden">
+      {/* Header - YouTube-like */}
+      <header className="bg-[#0A0A0B] border-b border-gray-800 z-50 flex-shrink-0">
+        <div className="flex items-center justify-between px-4 py-2">
+          {/* Left section with logo and menu */}
           <div className="flex items-center">
-            <span className="text-[#FF3366] font-bold text-xl">PayGate</span>
-          </div>
-
-          <div className="hidden md:flex space-x-8">
-            <NavLink href="#products">PRODUCTS</NavLink>
-            <NavLink href="#solutions">SOLUTIONS</NavLink>
-            <NavLink href="#customer">CUSTOMER</NavLink>
-            <NavLink href="#pricing">PRICING</NavLink>
-            <NavLink href="#resources">RESOURCES</NavLink>
-          </div>
-
-          <div className="flex items-center gap-4">
-            {/* Connect Wallet Button */}
-            <motion.button
-              onClick={handleConnect}
-              className="bg-transparent border border-white/20 rounded-full px-4 py-1 text-xs tracking-wider flex items-center gap-2 hover:bg-white/10 transition-colors"
-              whileHover={{ scale: 1.05, borderColor: "rgba(255, 51, 102, 0.4)" }}
-              whileTap={{ scale: 0.95 }}
-            >
-              {wallet.connected ? (
-                <>
-                  <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                  {`${wallet.publicKey?.toString().slice(0, 4)}...${wallet.publicKey?.toString().slice(-4)}`}
-                </>
-              ) : (
-                <>
-                  <Wallet className="w-3 h-3" />
-                  <span>CONNECT WALLET</span>
-                </>
-              )}
-            </motion.button>
-
-            <motion.button
-              className="bg-transparent border border-white/20 rounded-full px-4 py-1 text-xs tracking-wider flex items-center gap-2 hover:bg-white/10 transition-colors"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              REGISTER NOW
-              <ChevronRight className="w-4 h-4" />
-            </motion.button>
-
-            {/* Mobile menu button */}
             <button
-              className="md:hidden flex flex-col justify-center items-center"
-              onClick={() => setMenuOpen(!menuOpen)}
-              aria-label={menuOpen ? "Close menu" : "Open menu"}
+              className="p-2 mr-2 rounded-full hover:bg-[#161921] lg:hidden"
+              onClick={() => setSidebarOpen(!sidebarOpen)}
             >
-              {menuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
+            <div className="flex items-center">
+              <div className="w-8 h-8 bg-[#FF3366] rounded-md flex items-center justify-center">
+                <Zap className="w-4 h-4 text-white" />
+              </div>
+              <span className="text-[#FF3366] font-bold text-xl ml-2">PayGate</span>
+            </div>
+          </div>
+
+          {/* Center section with search */}
+          <div className="hidden md:flex items-center flex-1 max-w-xl mx-4">
+            <div className="relative w-full flex">
+              <input
+                type="text"
+                placeholder="Search"
+                className="w-full bg-[#161921] border border-gray-800 rounded-l-full py-2 pl-4 pr-4 text-sm focus:outline-none"
+              />
+              <button className="bg-[#161921] border border-l-0 border-gray-800 rounded-r-full px-4 hover:bg-[#1e212b]">
+                <Search className="w-5 h-5 text-gray-400" />
+              </button>
+            </div>
+          </div>
+
+          {/* Right section with actions */}
+          <div className="flex items-center space-x-4">
+            <button className="md:hidden p-2 rounded-full hover:bg-[#161921]">
+              <Search className="w-5 h-5" />
+            </button>
+
+            {/* Dashboard button */}
+            <Link
+              to="/dashboard"
+              className="hidden md:flex items-center gap-2 bg-[#FF3366] text-white px-3 py-1.5 rounded-md hover:bg-[#FF3366]/90 transition-colors"
+            >
+              <LayoutDashboard className="w-4 h-4" />
+              <span>Dashboard</span>
+            </Link>
+
+            {/* Notification bell */}
+            <button className="relative p-2 rounded-full hover:bg-[#161921]">
+              <Bell className="w-5 h-5" />
+              {notifications > 0 && (
+                <span className="absolute top-0 right-0 w-4 h-4 bg-[#FF3366] rounded-full text-xs flex items-center justify-center">
+                  {notifications}
+                </span>
+              )}
+            </button>
+
+            {/* Wallet button */}
+            <WalletButton />
           </div>
         </div>
-      </motion.nav>
+      </header>
 
-      {/* Mobile Menu */}
-      <AnimatePresence>
-        {menuOpen && (
-          <motion.div
-            className="fixed inset-0 z-40 bg-black/95 flex flex-col items-center justify-center"
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.3 }}
-          >
-            <div className="flex flex-col space-y-8 items-center">
-              <MobileNavLink href="#products" onClick={() => setMenuOpen(false)}>
-                PRODUCTS
-              </MobileNavLink>
-              <MobileNavLink href="#solutions" onClick={() => setMenuOpen(false)}>
-                SOLUTIONS
-              </MobileNavLink>
-              <MobileNavLink href="#customer" onClick={() => setMenuOpen(false)}>
-                CUSTOMER
-              </MobileNavLink>
-              <MobileNavLink href="#pricing" onClick={() => setMenuOpen(false)}>
-                PRICING
-              </MobileNavLink>
-              <MobileNavLink href="#resources" onClick={() => setMenuOpen(false)}>
-                RESOURCES
-              </MobileNavLink>
+      {/* Main content with YouTube-like layout */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Sidebar - YouTube-like */}
+        <aside
+          className={`fixed top-[53px] bottom-0 left-0 w-64 bg-[#0A0A0B] border-r border-gray-800 z-40 transition-transform duration-300 lg:translate-x-0 overflow-y-auto ${
+            sidebarOpen ? "translate-x-0" : "-translate-x-full"
+          } lg:static lg:h-full`}
+        >
+          <div className="py-4 px-3">
+            {/* Main navigation */}
+            <div className="mb-6">
+              <button
+                className={`w-full flex items-center gap-3 p-2.5 rounded-md text-left ${
+                  activeTab === "home" ? "bg-[#161921] font-medium" : "text-gray-300 hover:bg-[#161921]/50"
+                }`}
+                onClick={() => setActiveTab("home")}
+              >
+                <HomeIcon className="w-5 h-5" />
+                <span>Home</span>
+              </button>
+
+              <button
+                className={`w-full flex items-center gap-3 p-2.5 rounded-md text-left ${
+                  activeTab === "trending" ? "bg-[#161921] font-medium" : "text-gray-300 hover:bg-[#161921]/50"
+                }`}
+                onClick={() => setActiveTab("trending")}
+              >
+                <TrendingUp className="w-5 h-5" />
+                <span>Trending</span>
+              </button>
+
+              <button
+                className={`w-full flex items-center gap-3 p-2.5 rounded-md text-left ${
+                  activeTab === "subscriptions" ? "bg-[#161921] font-medium" : "text-gray-300 hover:bg-[#161921]/50"
+                }`}
+                onClick={() => setActiveTab("subscriptions")}
+              >
+                <Users className="w-5 h-5" />
+                <span>Subscriptions</span>
+              </button>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
-      {/* Hero Section */}
-      <section className="relative pt-32 pb-20 min-h-screen flex items-center">
-        <div className="max-w-7xl mx-auto px-6 relative z-10">
-          <div className="flex flex-col md:flex-row items-center">
-            <motion.div
-              className="md:w-1/2 mb-12 md:mb-0"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8 }}
-            >
-              <motion.h1
-                className="text-6xl md:text-8xl font-bold leading-tight"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, delay: 0.2 }}
+            <div className="border-t border-gray-800 pt-4 mb-6">
+              <button
+                className={`w-full flex items-center gap-3 p-2.5 rounded-md text-left ${
+                  activeTab === "library" ? "bg-[#161921] font-medium" : "text-gray-300 hover:bg-[#161921]/50"
+                }`}
+                onClick={() => setActiveTab("library")}
               >
-                <span className="text-white">Web3</span> <span className="text-gray-500">Content</span>
-                <div className="bg-clip-text text-transparent bg-gradient-to-r from-[#FF3366] to-[#FF9933]">
-                  Platform.
+                <PlaySquare className="w-5 h-5" />
+                <span>Library</span>
+              </button>
+
+              <button
+                className={`w-full flex items-center gap-3 p-2.5 rounded-md text-left ${
+                  activeTab === "history" ? "bg-[#161921] font-medium" : "text-gray-300 hover:bg-[#161921]/50"
+                }`}
+                onClick={() => setActiveTab("history")}
+              >
+                <History className="w-5 h-5" />
+                <span>History</span>
+              </button>
+
+              <button
+                className={`w-full flex items-center gap-3 p-2.5 rounded-md text-left ${
+                  activeTab === "liked" ? "bg-[#161921] font-medium" : "text-gray-300 hover:bg-[#161921]/50"
+                }`}
+                onClick={() => setActiveTab("liked")}
+              >
+                <ThumbsUp className="w-5 h-5" />
+                <span>Liked Content</span>
+              </button>
+            </div>
+
+            {/* Platform features */}
+            <div className="border-t border-gray-800 pt-4 mb-6">
+              <h3 className="text-sm font-medium text-gray-400 mb-2 px-3">PLATFORM FEATURES</h3>
+
+              <button
+                className={`w-full flex items-center gap-3 p-2.5 rounded-md text-left text-gray-300 hover:bg-[#161921]/50`}
+              >
+                <Vote className="w-5 h-5" />
+                <span>DAO Proposals</span>
+              </button>
+
+              <button
+                className={`w-full flex items-center gap-3 p-2.5 rounded-md text-left text-gray-300 hover:bg-[#161921]/50`}
+              >
+                <Coins className="w-5 h-5" />
+                <span>Subscription Plans</span>
+              </button>
+
+              <button
+                className={`w-full flex items-center gap-3 p-2.5 rounded-md text-left text-gray-300 hover:bg-[#161921]/50`}
+              >
+                <Split className="w-5 h-5" />
+                <span>Revenue Splitting</span>
+              </button>
+
+              <button
+                className={`w-full flex items-center gap-3 p-2.5 rounded-md text-left text-gray-300 hover:bg-[#161921]/50`}
+              >
+                <Shield className="w-5 h-5" />
+                <span>Smart Contracts</span>
+              </button>
+            </div>
+
+            {/* Subscriptions */}
+            <div className="border-t border-gray-800 pt-4">
+              <h3 className="text-sm font-medium text-gray-400 mb-2 px-3">SUBSCRIPTIONS</h3>
+              {trendingCreators.map((creator, index) => (
+                <button
+                  key={index}
+                  className="w-full flex items-center gap-3 p-2.5 rounded-md text-left text-gray-300 hover:bg-[#161921]/50"
+                >
+                  <div className="w-6 h-6 rounded-full bg-[#FF3366]/10 flex items-center justify-center">
+                    <Users className="w-3 h-3 text-[#FF3366]" />
+                  </div>
+                  <span className="truncate">{creator.name}</span>
+                </button>
+              ))}
+
+              <button className="w-full flex items-center gap-3 p-2.5 rounded-md text-left text-gray-300 hover:bg-[#161921]/50">
+                <ChevronDown className="w-5 h-5" />
+                <span>Show more</span>
+              </button>
+            </div>
+
+            {/* Dashboard link */}
+            <div className="border-t border-gray-800 mt-4 pt-4">
+              <Link
+                to="/dashboard"
+                className="w-full flex items-center gap-3 p-2.5 rounded-md text-left text-[#FF3366] hover:bg-[#161921]/50"
+              >
+                <LayoutDashboard className="w-5 h-5" />
+                <span>Go to Dashboard</span>
+              </Link>
+            </div>
+          </div>
+        </aside>
+
+        {/* Main content - Scrollable */}
+        <main ref={mainContentRef} className="flex-1 overflow-y-auto">
+          <div className="py-6 px-4">
+            {/* Category chips - YouTube-like */}
+            <div className="flex items-center space-x-2 overflow-x-auto pb-4 mb-6 hide-scrollbar sticky top-0 bg-[#0F1116] z-10 py-2">
+              <button
+                className={`${activeCategory === "all" ? "bg-[#FF3366] text-white" : "bg-[#161921] hover:bg-[#1e212b]"} px-3 py-1 rounded-full text-sm whitespace-nowrap`}
+                onClick={() => setActiveCategory("all")}
+              >
+                All
+              </button>
+              <button
+                className={`${activeCategory === "video" ? "bg-[#FF3366] text-white" : "bg-[#161921] hover:bg-[#1e212b]"} px-3 py-1 rounded-full text-sm whitespace-nowrap flex items-center gap-1`}
+                onClick={() => setActiveCategory("video")}
+              >
+                <Video className="w-3 h-3" /> Videos
+              </button>
+              <button
+                className={`${activeCategory === "article" ? "bg-[#FF3366] text-white" : "bg-[#161921] hover:bg-[#1e212b]"} px-3 py-1 rounded-full text-sm whitespace-nowrap flex items-center gap-1`}
+                onClick={() => setActiveCategory("article")}
+              >
+                <FileText className="w-3 h-3" /> Articles
+              </button>
+              <button
+                className={`${activeCategory === "podcast" ? "bg-[#FF3366] text-white" : "bg-[#161921] hover:bg-[#1e212b]"} px-3 py-1 rounded-full text-sm whitespace-nowrap flex items-center gap-1`}
+                onClick={() => setActiveCategory("podcast")}
+              >
+                <Headphones className="w-3 h-3" /> Podcasts
+              </button>
+              <button
+                className={`${activeCategory === "guide" ? "bg-[#FF3366] text-white" : "bg-[#161921] hover:bg-[#1e212b]"} px-3 py-1 rounded-full text-sm whitespace-nowrap flex items-center gap-1`}
+                onClick={() => setActiveCategory("guide")}
+              >
+                <BookOpen className="w-3 h-3" /> Guides
+              </button>
+              <button className="bg-[#161921] hover:bg-[#1e212b] px-3 py-1 rounded-full text-sm whitespace-nowrap">
+                NFTs
+              </button>
+              <button className="bg-[#161921] hover:bg-[#1e212b] px-3 py-1 rounded-full text-sm whitespace-nowrap">
+                DeFi
+              </button>
+              <button className="bg-[#161921] hover:bg-[#1e212b] px-3 py-1 rounded-full text-sm whitespace-nowrap">
+                Gaming
+              </button>
+              <button className="bg-[#161921] hover:bg-[#1e212b] px-3 py-1 rounded-full text-sm whitespace-nowrap">
+                DAOs
+              </button>
+            </div>
+
+            {/* Active DAO Proposals */}
+            {activeTab === "home" && (
+              <div className="mb-8 bg-[#161921] rounded-md p-4 border border-gray-800">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-medium flex items-center gap-2">
+                    <Vote className="w-4 h-4 text-[#FF3366]" />
+                    Active DAO Proposals
+                  </h3>
+                  <Link to="/dashboard/proposals" className="text-[#FF3366] text-sm hover:underline">
+                    View All
+                  </Link>
                 </div>
-              </motion.h1>
-
-              <motion.div
-                className="flex flex-wrap gap-6 my-12"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, delay: 0.4 }}
-              >
-                <StatsCard value="240+" label="PARTNERS" icon={<Users className="w-4 h-4" />} />
-                <StatsCard value="92%" label="FASTER TECHNOLOGY" icon={<TrendingUp className="w-4 h-4" />} />
-              </motion.div>
-
-              <motion.div
-                className="text-gray-300 mb-8 max-w-md"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, delay: 0.6 }}
-              >
-                <p>Better data leads to more performance models.</p>
-                <p>Performant models lead to faster deployment.</p>
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, delay: 0.8 }}
-              >
-                <GlowingButton onClick={handleSubscribe}>GET STARTED</GlowingButton>
-              </motion.div>
-            </motion.div>
-
-            <motion.div
-              className="md:w-1/2 flex items-center justify-center"
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 1, delay: 0.6 }}
-            >
-              <div className="relative w-full max-w-md aspect-square">
-                {/* Image glow effects */}
-                <div className="absolute -inset-4 bg-gradient-radial from-[#FF3366]/20 via-[#FF9933]/10 to-transparent rounded-full blur-xl"></div>
-
-                {/* Decorative elements */}
-                <motion.div
-                  className="absolute -top-8 -right-8 w-16 h-16 border border-[#FF3366]/30 rounded-full"
-                  animate={{
-                    scale: [1, 1.1, 1],
-                    opacity: [0.3, 0.5, 0.3],
-                  }}
-                  transition={{
-                    duration: 4,
-                    repeat: Number.POSITIVE_INFINITY,
-                    repeatType: "reverse",
-                  }}
-                />
-
-                <motion.div
-                  className="absolute -bottom-6 -left-6 w-24 h-24 border border-[#FF9933]/30 rounded-full"
-                  animate={{
-                    scale: [1, 1.15, 1],
-                    opacity: [0.2, 0.4, 0.2],
-                  }}
-                  transition={{
-                    duration: 5,
-                    repeat: Number.POSITIVE_INFINITY,
-                    repeatType: "reverse",
-                    delay: 1,
-                  }}
-                />
-
-                {/* Main image with overlay */}
-                <div className="relative z-10 w-full h-full rounded-2xl overflow-hidden border border-white/10 backdrop-blur-sm bg-black/20">
-                  <img
-                    src="https://placehold.co/600x600.png?text=Web3+Content"
-                    alt="Web3 Content Platform"
-                    className="w-full h-full object-cover mix-blend-luminosity opacity-90"
-                  />
-
-                  {/* Gradient overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-[#FF3366]/30 to-[#FF9933]/30 mix-blend-overlay"></div>
-
-                  {/* Scanlines effect */}
-                  <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxkZWZzPjxwYXR0ZXJuIGlkPSJwYXR0ZXJuIiB3aWR0aD0iMSIgaGVpZ2h0PSIyIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIiBwYXR0ZXJuVHJhbnNmb3JtPSJyb3RhdGUoOTApIj48cmVjdCB4PSIwIiB5PSIwIiB3aWR0aD0iMSIgaGVpZ2h0PSIxIiBmaWxsPSIjMDAwIiBvcGFjaXR5PSIwLjAzIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI3BhdHRlcm4pIi8+PC9zdmc+')] opacity-20"></div>
+                <div className="space-y-3">
+                  {activeProposals.map((proposal) => (
+                    <div key={proposal.id} className="bg-[#0F1116] rounded-md p-3 flex items-center justify-between">
+                      <div>
+                        <div className="font-medium text-sm">{proposal.title}</div>
+                        <div className="text-xs text-gray-400 flex items-center gap-1 mt-1">
+                          <Clock className="w-3 h-3" /> {proposal.daysLeft} days left
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="text-xs text-gray-400">{proposal.votes} votes</div>
+                        <button className="bg-[#FF3366] text-white text-xs px-2 py-1 rounded">Vote</button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
-            </motion.div>
-          </div>
-        </div>
+            )}
 
-        {/* Scroll Indicator */}
-        <motion.div
-          className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex flex-col items-center"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.5, duration: 1 }}
-        >
-          <span className="text-xs text-gray-400 mb-2">SCROLL</span>
-          <motion.div
-            className="w-0.5 h-8 bg-gradient-to-b from-white to-transparent"
-            animate={{
-              scaleY: [1, 1.5, 1],
-              opacity: [0.6, 1, 0.6],
-            }}
-            transition={{
-              duration: 1.5,
-              repeat: Number.POSITIVE_INFINITY,
-              repeatType: "reverse",
-            }}
-          />
-        </motion.div>
-      </section>
+            {/* Content grid - All types */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {filteredContent.map((item) => (
+                <div key={item.id} className="flex flex-col">
+                  {/* Thumbnail with appropriate indicators for each content type */}
+                  <div className="relative aspect-video bg-[#161921] rounded-md overflow-hidden mb-2">
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      {getContentTypeIcon(item.type)}
+                    </div>
+
+                    {/* Content type specific indicators */}
+                    {item.type === "video" && (
+                      <div className="absolute bottom-2 right-2 bg-black/80 text-white text-xs px-1 py-0.5 rounded">
+                        {item.duration}
+                      </div>
+                    )}
+
+                    {item.type === "article" && (
+                      <div className="absolute bottom-2 right-2 bg-black/80 text-white text-xs px-1 py-0.5 rounded">
+                        {item.readTime}
+                      </div>
+                    )}
+
+                    {item.type === "podcast" && (
+                      <div className="absolute bottom-2 right-2 bg-black/80 text-white text-xs px-1 py-0.5 rounded">
+                        {item.duration}
+                      </div>
+                    )}
+
+                    {item.type === "guide" && (
+                      <div className="absolute bottom-2 right-2 bg-black/80 text-white text-xs px-1 py-0.5 rounded">
+                        {item.chapters}
+                      </div>
+                    )}
+
+                    {/* Content tier badge */}
+                    {item.tier === "Premium" && (
+                      <div className="absolute top-2 left-2 bg-[#FF3366] text-white text-xs px-1.5 py-0.5 rounded">
+                        PREMIUM
+                      </div>
+                    )}
+
+                    {/* Content type badge */}
+                    <div className="absolute top-2 right-2 bg-black/80 text-white text-xs px-1.5 py-0.5 rounded flex items-center gap-1">
+                      {item.type === "video" && <Video className="w-3 h-3" />}
+                      {item.type === "article" && <FileText className="w-3 h-3" />}
+                      {item.type === "podcast" && <Headphones className="w-3 h-3" />}
+                      {item.type === "guide" && <BookOpen className="w-3 h-3" />}
+                      <span className="capitalize">{item.type}</span>
+                    </div>
+                  </div>
+
+                  {/* Content info */}
+                  <div className="flex">
+                    {/* Creator avatar */}
+                    <div className="w-9 h-9 rounded-full bg-[#FF3366]/10 flex-shrink-0 flex items-center justify-center mr-3">
+                      <Users className="w-4 h-4 text-[#FF3366]" />
+                    </div>
+
+                    {/* Content details */}
+                    <div className="flex-1">
+                      <h3 className="font-medium text-sm mb-1 line-clamp-2">{item.title}</h3>
+                      <p className="text-gray-400 text-xs mb-1">{item.creator}</p>
+                      <div className="flex items-center text-gray-400 text-xs">
+                        <span>{item.views} views</span>
+                        <span className="mx-1">•</span>
+                        <span>{item.timeAgo}</span>
+                      </div>
+                    </div>
+
+                    {/* Options button */}
+                    <button className="p-1 text-gray-400 hover:text-white">
+                      <MoreVertical className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </main>
+      </div>
+
+      {/* Mobile bottom navigation */}
+      <div className="fixed bottom-0 left-0 right-0 bg-[#0A0A0B] border-t border-gray-800 lg:hidden z-50">
+        <div className="grid grid-cols-5 gap-1 p-2">
+          <button
+            className={`flex flex-col items-center justify-center p-2 rounded-md ${
+              activeTab === "home" ? "text-white" : "text-gray-400"
+            }`}
+            onClick={() => setActiveTab("home")}
+          >
+            <HomeIcon className="w-5 h-5" />
+            <span className="text-xs mt-1">Home</span>
+          </button>
+
+          <button
+            className={`flex flex-col items-center justify-center p-2 rounded-md ${
+              activeTab === "trending" ? "text-white" : "text-gray-400"
+            }`}
+            onClick={() => setActiveTab("trending")}
+          >
+            <TrendingUp className="w-5 h-5" />
+            <span className="text-xs mt-1">Trending</span>
+          </button>
+
+          <Link to="/dashboard" className="flex flex-col items-center justify-center p-2 rounded-md text-[#FF3366]">
+            <div className="w-10 h-10 bg-[#FF3366] rounded-full flex items-center justify-center -mt-5 border-4 border-[#0A0A0B]">
+              <LayoutDashboard className="w-5 h-5 text-white" />
+            </div>
+            <span className="text-xs mt-1">Dashboard</span>
+          </Link>
+
+          <button
+            className={`flex flex-col items-center justify-center p-2 rounded-md ${
+              activeTab === "subscriptions" ? "text-white" : "text-gray-400"
+            }`}
+            onClick={() => setActiveTab("subscriptions")}
+          >
+            <Users className="w-5 h-5" />
+            <span className="text-xs mt-1">Subs</span>
+          </button>
+
+          <button
+            className={`flex flex-col items-center justify-center p-2 rounded-md ${
+              activeTab === "library" ? "text-white" : "text-gray-400"
+            }`}
+            onClick={() => setActiveTab("library")}
+          >
+            <PlaySquare className="w-5 h-5" />
+            <span className="text-xs mt-1">Library</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Overlay for mobile sidebar */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 bg-black/50 z-30 lg:hidden" onClick={() => setSidebarOpen(false)}></div>
+      )}
     </div>
   )
 }
 
-// Navigation Link Component
-const NavLink = ({ href, children }) => (
-  <motion.a
-    href={href}
-    className="text-gray-300 hover:text-white transition-colors text-xs tracking-wider"
-    whileHover={{ y: -2 }}
-    whileTap={{ y: 0 }}
-  >
-    {children}
-  </motion.a>
-)
-
-// Mobile Navigation Link Component
-const MobileNavLink = ({ href, children, onClick }) => (
-  <motion.a
-    href={href}
-    className="text-2xl font-bold"
-    onClick={onClick}
-    whileHover={{ scale: 1.1, x: 5 }}
-    whileTap={{ scale: 0.95 }}
-  >
-    {children}
-  </motion.a>
-)
-
-// Stats Card Component
-const StatsCard = ({ value, label, icon }) => (
-  <motion.div
-    className="bg-black/30 backdrop-blur-sm rounded-xl p-4 border border-white/10 w-32"
-    whileHover={{
-      y: -5,
-      borderColor: "rgba(255, 51, 102, 0.3)",
-    }}
-  >
-    <div className="flex items-center gap-2 mb-1">
-      <div className="text-[#FF3366]">{icon}</div>
-      <div className="text-3xl font-bold">{value}</div>
-    </div>
-    <div className="text-xs text-gray-400 uppercase tracking-wider">{label}</div>
-  </motion.div>
-)
-
-// Glowing Button Component
-const GlowingButton = ({ children, onClick }) => (
-  <motion.button
-    className="relative group overflow-hidden bg-white text-black font-medium rounded-full px-8 py-3 text-base flex items-center justify-center gap-2"
-    onClick={onClick}
-    whileHover={{ scale: 1.05 }}
-    whileTap={{ scale: 0.95 }}
-  >
-    <span className="relative z-10">{children}</span>
-
-    <motion.span
-      className="relative z-10"
-      initial={{ x: -5, opacity: 0 }}
-      whileHover={{ x: 0, opacity: 1 }}
-      transition={{ duration: 0.3 }}
-    >
-      <ArrowRight className="w-4 h-4" />
-    </motion.span>
-
-    {/* Glow effect */}
-    <motion.span
-      className="absolute inset-0 bg-gradient-to-r from-[#FF3366] to-[#FF9933] opacity-0 group-hover:opacity-20 transition-opacity duration-300"
-      initial={{ opacity: 0 }}
-      whileHover={{ opacity: 0.2 }}
-    />
-
-    {/* Shine effect */}
-    <motion.span
-      className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/30 to-transparent"
-      initial={{ x: "-100%" }}
-      whileHover={{ x: "100%" }}
-      transition={{ duration: 1, ease: "easeInOut" }}
-    />
-  </motion.button>
-)
-
-export default Home
+export default UserFeed
