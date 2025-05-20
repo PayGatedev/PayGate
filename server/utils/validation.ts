@@ -1,4 +1,4 @@
-import type { ContentType, SubscriptionModel } from "../models/Creator"
+import type { ContentType, SubscriptionModel } from "../models/creator"
 
 interface CreatorInput {
   username: string
