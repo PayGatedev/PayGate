@@ -1,5 +1,5 @@
 import express from "express"
-import Creator from "../models/Creator"
+import Creator from "../models/creator"
 import { validateCreatorInput } from "../utils/validation"
 
 const router = express.Router()
