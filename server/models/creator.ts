@@ -16,7 +16,6 @@ export interface ICreator extends Document {
   updatedAt: Date
 }
 
-// Creator schema
 const CreatorSchema: Schema = new Schema(
   {
     username: {
@@ -69,5 +68,4 @@ const CreatorSchema: Schema = new Schema(
   },
 )
 
-// Create and export the model
 export default mongoose.model<ICreator>("Creator", CreatorSchema)

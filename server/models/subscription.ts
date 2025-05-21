@@ -3,8 +3,8 @@ import mongoose, { Schema, Document } from "mongoose";
 export type SubscriptionType = "one-time" | "recurring" | "nft";
 
 export interface ISubscription extends Document {
-  user: mongoose.Types.ObjectId; // ref User
-  creator: mongoose.Types.ObjectId; // ref Creator
+  user: mongoose.Types.ObjectId;
+  creator: mongoose.Types.ObjectId;
   type: SubscriptionType;
   nftTokenId?: string;
   transactionHash: string;
