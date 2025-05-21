@@ -1,8 +1,6 @@
 import mongoose, { Document, Schema } from "mongoose";
 import { ICreator } from "./creator";
 
-/* ──────────────── ENUMS ──────────────── */
-
 export enum AccessType {
   FREE = "free",
   PAID = "paid",
@@ -14,8 +12,6 @@ export enum ContentKind {
   PODCAST = "podcast",
   VIDEO = "video",
 }
-
-/* ──────────────── SHARED TYPES ──────────────── */
 
 interface IContentBase extends Document {
   creator: ICreator["_id"];
@@ -42,8 +38,6 @@ interface IContentBase extends Document {
   createdAt: Date;
   updatedAt: Date;
 }
-
-/* ──────────────── BASE SCHEMA ──────────────── */
 
 const ContentBaseSchema = new Schema<IContentBase>(
   {
@@ -86,8 +80,6 @@ const ContentBaseSchema = new Schema<IContentBase>(
   { timestamps: true, discriminatorKey: "kind" },
 );
 
-/* ──────────────── ARTICLE ──────────────── */
-
 export interface IArticle extends IContentBase {
   kind: ContentKind.ARTICLE;
   content: string;
@@ -96,8 +88,6 @@ export interface IArticle extends IContentBase {
 const ArticleSchema = new Schema<IArticle>({
   content: { type: String, required: true },
 });
-
-/* ──────────────── GUIDE ──────────────── */
 
 export interface IGuide extends IContentBase {
   kind: ContentKind.GUIDE;
@@ -118,8 +108,6 @@ const GuideSchema = new Schema<IGuide>({
     },
   },
 });
-
-/* ──────────────── PODCAST ──────────────── */
 
 export interface IPodcastEpisode extends IContentBase {
   kind: ContentKind.PODCAST;
@@ -147,8 +135,6 @@ const PodcastSchema = new Schema<IPodcastEpisode>({
   ],
 });
 
-/* ──────────────── VIDEO ──────────────── */
-
 export interface IVideo extends IContentBase {
   kind: ContentKind.VIDEO;
   videoUrl: string;
@@ -168,8 +154,6 @@ const VideoSchema = new Schema<IVideo>({
     },
   ],
 });
-
-/* ──────────────── MODEL EXPORTS ──────────────── */
 
 export const ContentBase = mongoose.model<IContentBase>(
   "Content",

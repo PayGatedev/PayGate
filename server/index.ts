@@ -3,6 +3,8 @@ import mongoose from "mongoose"
 import cors from "cors"
 import dotenv from "dotenv"
 import { creatorRouter } from "./routes/creator"
+import { contentRouter } from "./routes/content"
+import { s3UploadRouter } from "./routes/upload"
 
 // Load environment variables
 dotenv.config()
@@ -15,7 +17,7 @@ app.use(cors())
 app.use(express.json())
 
 // Connect to MongoDB
-const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/paygate"
+const MONGODB_URI = process.env.MONGODB_URI!
 
 mongoose
   .connect(MONGODB_URI)
@@ -28,6 +30,10 @@ mongoose
 
 // Routes
 app.use("/api/creators", creatorRouter)
+
+app.use("/api/content", contentRouter)
+
+app.use("/api/s3", s3UploadRouter);
 
 // Health check route
 app.get("/health", (req, res) => {

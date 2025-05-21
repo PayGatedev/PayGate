@@ -18,7 +18,7 @@ function validateBody(schema: Joi.Schema) {
   };
 }
 
-router.post("/api/content/create", validateBody(createContentSchema), async (req, res) => {
+router.post("/create", validateBody(createContentSchema), async (req, res) => {
   try {
     const { walletAddress, ...payload } = req.body;
     const doc = await createContent(walletAddress, payload);
@@ -35,4 +35,4 @@ router.post("/api/content/create", validateBody(createContentSchema), async (req
   }
 });
 
-export default router;
+export {router as contentRouter};

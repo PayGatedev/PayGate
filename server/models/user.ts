@@ -3,9 +3,9 @@ import mongoose, { Schema, Document } from "mongoose";
 export interface IUser extends Document {
   walletAddress: string;
   username?: string;
-  comments: mongoose.Types.ObjectId[]; // refs Comment
-  likedContents: mongoose.Types.ObjectId[]; // refs Content
-  subscriptions: mongoose.Types.ObjectId[]; // refs Subscription
+  comments: mongoose.Types.ObjectId[];
+  likedContents: mongoose.Types.ObjectId[];
+  subscriptions: mongoose.Types.ObjectId[];
   createdAt: Date;
   updatedAt: Date;
 }
