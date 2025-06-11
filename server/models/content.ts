@@ -13,7 +13,7 @@ export enum ContentKind {
   VIDEO = "video",
 }
 
-interface IContentBase extends Document {
+export interface IContentBase extends Document {
   creator: ICreator["_id"];
   kind: ContentKind;
   title: string;
