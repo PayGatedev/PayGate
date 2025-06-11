@@ -1,104 +1,125 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
+import { useWallet } from "@solana/wallet-adapter-react"
 import { DashboardLayout } from "@/components/dashboard/layout"
-import { Plus, Search, Filter, FileText, Video, Headphones, BookOpen, SlidersHorizontal, Eye, Heart, MessageSquare, MoreVertical, Edit, Trash2, ExternalLink, Calendar, Clock, ArrowRight, CheckCircle, AlertCircle, Clock3 } from 'lucide-react'
+import {
+  Plus,
+  Search,
+  Filter,
+  FileText,
+  Video,
+  Headphones,
+  BookOpen,
+  SlidersHorizontal,
+  ArrowRight,
+  CheckCircle,
+  AlertCircle,
+  Clock3,
+  Loader2,
+} from "lucide-react"
+import { ContentKind, AccessType } from "../../../types/content"
+import { ContentCard } from "@/components/dashboard/content-card"
+
+interface DisplayContentItem {
+  id: string
+  title: string
+  type: ContentKind
+  status: "published" | "draft" | "scheduled"
+  accessType: AccessType
+  date: string
+  views: number
+  likes: number
+  comments: number
+  thumbnailUrl?: string
+  duration?: string
+}
 
 export default function ContentPage() {
   const navigate = useNavigate()
+  const { publicKey, connected: isWalletConnected } = useWallet()
+
+  const [contentItems, setContentItems] = useState<DisplayContentItem[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [fetchError, setFetchError] = useState<string | null>(null)
+
   const [activeFilter, setActiveFilter] = useState<string>("all")
   const [activeTab, setActiveTab] = useState<string>("all")
   const [searchQuery, setSearchQuery] = useState("")
-  const [menuOpen, setMenuOpen] = useState<number | null>(null)
 
-  const contentItems = [
-    {
-      id: 1,
-      title: "Getting Started with Solana Development",
-      type: "article",
-      status: "published",
-      accessType: "recurring",
-      date: "May 10, 2025",
-      views: 1245,
-      likes: 89,
-      comments: 32,
-      duration: "15 min read",
-    },
-    {
-      id: 2,
-      title: "NFT Marketplace Deep Dive",
-      type: "video",
-      status: "published",
-      accessType: "nft",
-      date: "May 5, 2025",
-      views: 2189,
-      likes: 156,
-      comments: 47,
-      duration: "32 min",
-    },
-    {
-      id: 3,
-      title: "Web3 Gaming Podcast Episode 5",
-      type: "podcast",
-      status: "published",
-      accessType: "free",
-      date: "May 1, 2025",
-      views: 876,
-      likes: 45,
-      comments: 12,
-      duration: "48 min",
-    },
-    {
-      id: 4,
-      title: "DeFi Staking Strategies",
-      type: "guide",
-      status: "draft",
-      accessType: "one-time",
-      date: "Draft",
-      views: 0,
-      likes: 0,
-      comments: 0,
-      duration: "25 min read",
-    },
-    {
-      id: 5,
-      title: "Tokenomics Explained",
-      type: "article",
-      status: "scheduled",
-      accessType: "recurring",
-      date: "Scheduled for May 20, 2025",
-      views: 0,
-      likes: 0,
-      comments: 0,
-      duration: "20 min read",
-    },
-    {
-      id: 6,
-      title: "Building a DAO from Scratch",
-      type: "video",
-      status: "published",
-      accessType: "recurring",
-      date: "April 25, 2025",
-      views: 1567,
-      likes: 123,
-      comments: 34,
-      duration: "45 min",
-    },
-  ]
+  useEffect(() => {
+    const fetchCreatorContent = async () => {
+      if (!isWalletConnected) {
+        setContentItems([])
+        setFetchError("Please connect your wallet to view your content.")
+        setIsLoading(false)
+        return
+      }
+      if (!publicKey) {
+        setContentItems([])
+        setFetchError("Wallet connected, but public key is not available to fetch content.")
+        setIsLoading(false)
+        return
+      }
 
-  const typeIcons = {
-    article: <FileText className="w-full h-full" />,
-    video: <Video className="w-full h-full" />,
-    podcast: <Headphones className="w-full h-full" />,
-    guide: <BookOpen className="w-full h-full" />,
+      setIsLoading(true)
+      setFetchError(null)
+      setContentItems([])
+      const walletAddress = publicKey.toBase58()
+
+      try {
+        const response = await fetch(`https://paygate-dyof.onrender.com/api/content/by-creator/${walletAddress}`)
+
+        if (!response.ok) {
+          let errorMsg = `Error ${response.status}: ${response.statusText}`
+          try {
+            const errorData = await response.json()
+            errorMsg = errorData.message || errorMsg
+          } catch (e) {
+            // Response was not JSON, use statusText
+          }
+          throw new Error(errorMsg)
+        }
+        const dataFromApi: any[] = await response.json()
+
+        const formattedData: DisplayContentItem[] = dataFromApi.map((item) => ({
+          id: item._id,
+          title: item.title,
+          type: item.kind as ContentKind,
+          status: item.status as "published" | "draft" | "scheduled",
+          accessType: item.accessType as AccessType,
+          date: new Date(item.date).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
+          views: item.views,
+          likes: item.likes,
+          comments: item.comments,
+          thumbnailUrl: item.thumbnailUrl,
+          duration: item.duration || "N/A",
+        }))
+        setContentItems(formattedData)
+      } catch (error: any) {
+        console.error("Error fetching creator content:", error)
+        setFetchError(error.message || "An unknown error occurred while fetching your content.")
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchCreatorContent()
+  }, [publicKey, isWalletConnected])
+
+  const typeIcons: Record<ContentKind, JSX.Element> = {
+    [ContentKind.ARTICLE]: <FileText className="w-full h-full" />,
+    [ContentKind.VIDEO]: <Video className="w-full h-full" />,
+    [ContentKind.PODCAST]: <Headphones className="w-full h-full" />,
+    [ContentKind.GUIDE]: <BookOpen className="w-full h-full" />,
   }
 
-  const typeColors = {
-    article: "from-green-500/30 to-green-500/10 text-green-400",
-    video: "from-blue-500/30 to-blue-500/10 text-blue-400",
-    podcast: "from-purple-500/30 to-purple-500/10 text-purple-400",
-    guide: "from-yellow-500/30 to-yellow-500/10 text-yellow-400",
+  const typeColors: Record<ContentKind, string> = {
+    [ContentKind.ARTICLE]: "from-green-500/30 to-green-500/10 text-green-400",
+    [ContentKind.VIDEO]: "from-blue-500/30 to-blue-500/10 text-blue-400",
+    [ContentKind.PODCAST]: "from-purple-500/30 to-purple-500/10 text-purple-400",
+    [ContentKind.GUIDE]: "from-yellow-500/30 to-yellow-500/10 text-yellow-400",
   }
 
   const statusColors = {
@@ -107,8 +128,9 @@ export default function ContentPage() {
     scheduled: "bg-blue-500/20 text-blue-400",
   }
 
-  const accessColors = {
-    free: "bg-green-500/20 text-green-400",
+  const accessColors: Record<AccessType | "one-time" | "recurring" | "nft", string> = {
+    [AccessType.FREE]: "bg-green-500/20 text-green-400",
+    [AccessType.PAID]: "bg-yellow-500/20 text-yellow-400",
     "one-time": "bg-yellow-500/20 text-yellow-400",
     recurring: "bg-[#FF3366]/20 text-[#FF3366]",
     nft: "bg-purple-500/20 text-purple-400",
@@ -120,303 +142,175 @@ export default function ContentPage() {
     scheduled: <Clock3 className="w-4 h-4 mr-1" />,
   }
 
-  const handleTabChange = (tab: string) => {
-    setActiveTab(tab)
-  }
-
-  const handleFilterChange = (filter: string) => {
-    setActiveFilter(filter)
-  }
-
-  const handleMenuToggle = (id: number) => {
-    setMenuOpen(menuOpen === id ? null : id)
-  }
-
-  const handleNewContent = () => {
-    navigate("/dashboard/content/create")
-  }
-
-  const handleEdit = (id: number) => {
-    console.log("Edit content", id)
-    setMenuOpen(null)
-  }
-
-  const handleDelete = (id: number) => {
-    console.log("Delete content", id)
-    setMenuOpen(null)
-  }
-
-  const handleViewOnChain = (id: number) => {
-    console.log("View on chain", id)
-    setMenuOpen(null)
-  }
+  const handleTabChange = (tab: string) => setActiveTab(tab)
+  const handleFilterChange = (filter: string) => setActiveFilter(filter)
+  const handleNewContent = () => navigate("/dashboard/content/create")
 
   const filteredContent = contentItems.filter((item) => {
-    // Filter by tab
     if (activeTab !== "all" && item.status !== activeTab) return false
-
-    // Filter by type/access/etc
     const matchesFilter =
       activeFilter === "all" ||
       item.type === activeFilter ||
       item.status === activeFilter ||
       item.accessType === activeFilter
-
-    // Filter by search
     const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase())
-
     return matchesFilter && matchesSearch
   })
 
-  return (
-    <DashboardLayout>
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-white to-white/70 bg-clip-text text-transparent">
-            My Content
-          </h1>
-          <p className="text-white/60 mt-1">Manage and publish your content</p>
+  const renderHeader = () => (
+    <div className="flex justify-between items-center mb-6">
+      <div>
+        <h1 className="text-3xl font-bold bg-gradient-to-r from-white to-white/70 bg-clip-text text-transparent">
+          My Content
+        </h1>
+        <p className="text-white/60 mt-1">Manage and publish your content</p>
+      </div>
+      <button
+        onClick={handleNewContent}
+        className="flex items-center gap-2 bg-gradient-to-r from-[#FF3366] to-[#FF3366]/80 hover:from-[#FF3366]/90 hover:to-[#FF3366]/70 text-white px-4 py-2 rounded-lg transition-all shadow-glow-sm"
+      >
+        <Plus className="w-4 h-4" />
+        <span>Upload New</span>
+      </button>
+    </div>
+  )
+
+  const renderPageContent = () => {
+    if (isLoading) {
+      return (
+        <div className="flex justify-center items-center h-64">
+          <Loader2 className="w-12 h-12 animate-spin text-[#FF3366]" />
+          <p className="ml-4 text-white/80">Loading your content...</p>
         </div>
-        <button
-          onClick={handleNewContent}
-          className="flex items-center gap-2 bg-gradient-to-r from-[#FF3366] to-[#FF3366]/80 hover:from-[#FF3366]/90 hover:to-[#FF3366]/70 text-white px-4 py-2 rounded-lg transition-all shadow-glow-sm"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Upload New</span>
-        </button>
-      </div>
+      )
+    }
 
-      {/* Content Tabs */}
-      <div className="mb-6 flex overflow-x-auto hide-scrollbar">
-        <button
-          onClick={() => handleTabChange("all")}
-          className={`px-4 py-2 rounded-full mr-2 transition-all ${
-            activeTab === "all"
-              ? "bg-gradient-to-r from-[#FF3366] to-[#FF3366]/80 text-white font-medium shadow-glow-sm"
-              : "text-white/60 hover:text-white hover:bg-white/5"
-          }`}
-        >
-          All Content
-        </button>
-        <button
-          onClick={() => handleTabChange("published")}
-          className={`px-4 py-2 rounded-full mr-2 transition-all ${
-            activeTab === "published"
-              ? "bg-gradient-to-r from-[#FF3366] to-[#FF3366]/80 text-white font-medium shadow-glow-sm"
-              : "text-white/60 hover:text-white hover:bg-white/5"
-          }`}
-        >
-          Published
-        </button>
-        <button
-          onClick={() => handleTabChange("draft")}
-          className={`px-4 py-2 rounded-full mr-2 transition-all ${
-            activeTab === "draft"
-              ? "bg-gradient-to-r from-[#FF3366] to-[#FF3366]/80 text-white font-medium shadow-glow-sm"
-              : "text-white/60 hover:text-white hover:bg-white/5"
-          }`}
-        >
-          Drafts
-        </button>
-        <button
-          onClick={() => handleTabChange("scheduled")}
-          className={`px-4 py-2 rounded-full transition-all ${
-            activeTab === "scheduled"
-              ? "bg-gradient-to-r from-[#FF3366] to-[#FF3366]/80 text-white font-medium shadow-glow-sm"
-              : "text-white/60 hover:text-white hover:bg-white/5"
-          }`}
-        >
-          Scheduled
-        </button>
-      </div>
+    if (fetchError) {
+      return (
+        <div className="glassmorphism-card rounded-xl border border-white/10 bg-white/5 backdrop-blur-md p-8 text-center">
+          <AlertCircle className="w-16 h-16 text-red-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium mb-2 text-white">Error Fetching Content</h3>
+          <p className="text-white/60 mb-4">{fetchError}</p>
+        </div>
+      )
+    }
 
-      {/* Search and Filters */}
-      <div className="mb-6">
-        <div className="glassmorphism-card rounded-xl border border-white/10 bg-white/5 backdrop-blur-md p-4">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/40 w-4 h-4" />
-              <input
-                type="text"
-                placeholder="Search content..."
-                className="w-full bg-white/5 border border-white/10 rounded-lg py-2 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-[#FF3366]/30 focus:bg-white/10 transition-all"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+    if (filteredContent.length > 0) {
+      return (
+        <>
+          <div className="mb-6 flex overflow-x-auto hide-scrollbar">
+            <button
+              onClick={() => handleTabChange("all")}
+              className={`px-4 py-2 rounded-full mr-2 transition-all ${activeTab === "all" ? "bg-gradient-to-r from-[#FF3366] to-[#FF3366]/80 text-white font-medium shadow-glow-sm" : "text-white/60 hover:text-white hover:bg-white/5"}`}
+            >
+              All Content
+            </button>
+            <button
+              onClick={() => handleTabChange("published")}
+              className={`px-4 py-2 rounded-full mr-2 transition-all ${activeTab === "published" ? "bg-gradient-to-r from-[#FF3366] to-[#FF3366]/80 text-white font-medium shadow-glow-sm" : "text-white/60 hover:text-white hover:bg-white/5"}`}
+            >
+              Published
+            </button>
+            <button
+              onClick={() => handleTabChange("draft")}
+              className={`px-4 py-2 rounded-full mr-2 transition-all ${activeTab === "draft" ? "bg-gradient-to-r from-[#FF3366] to-[#FF3366]/80 text-white font-medium shadow-glow-sm" : "text-white/60 hover:text-white hover:bg-white/5"}`}
+            >
+              Drafts
+            </button>
+            <button
+              onClick={() => handleTabChange("scheduled")}
+              className={`px-4 py-2 rounded-full transition-all ${activeTab === "scheduled" ? "bg-gradient-to-r from-[#FF3366] to-[#FF3366]/80 text-white font-medium shadow-glow-sm" : "text-white/60 hover:text-white hover:bg-white/5"}`}
+            >
+              Scheduled
+            </button>
+          </div>
+          <div className="mb-6">
+            <div className="glassmorphism-card rounded-xl border border-white/10 bg-white/5 backdrop-blur-md p-4">
+              <div className="flex flex-col md:flex-row gap-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/40 w-4 h-4" />
+                  <input
+                    type="text"
+                    placeholder="Search content..."
+                    className="w-full bg-white/5 border border-white/10 rounded-lg py-2 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-[#FF3366]/30 focus:bg-white/10 transition-all"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+                <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-2 md:pb-0">
+                  <button
+                    onClick={() => handleFilterChange("all")}
+                    className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm whitespace-nowrap transition-all ${activeFilter === "all" ? "bg-gradient-to-r from-[#FF3366]/20 to-[#FF3366]/5 text-[#FF3366] border border-[#FF3366]/20 shadow-glow-sm" : "bg-white/5 text-white/80 border border-white/10 hover:bg-white/10"}`}
+                  >
+                    <Filter className="w-4 h-4" /> All Types
+                  </button>
+                  <button
+                    onClick={() => handleFilterChange(ContentKind.ARTICLE)}
+                    className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm whitespace-nowrap transition-all ${activeFilter === ContentKind.ARTICLE ? "bg-gradient-to-r from-green-500/20 to-green-500/5 text-green-400 border border-green-500/20" : "bg-white/5 text-white/80 border border-white/10 hover:bg-white/10"}`}
+                  >
+                    <FileText className="w-4 h-4" /> Articles
+                  </button>
+                  <button
+                    onClick={() => handleFilterChange(ContentKind.VIDEO)}
+                    className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm whitespace-nowrap transition-all ${activeFilter === ContentKind.VIDEO ? "bg-gradient-to-r from-blue-500/20 to-blue-500/5 text-blue-400 border border-blue-500/20" : "bg-white/5 text-white/80 border border-white/10 hover:bg-white/10"}`}
+                  >
+                    <Video className="w-4 h-4" /> Videos
+                  </button>
+                  <button
+                    onClick={() => handleFilterChange(ContentKind.PODCAST)}
+                    className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm whitespace-nowrap transition-all ${activeFilter === ContentKind.PODCAST ? "bg-gradient-to-r from-purple-500/20 to-purple-500/5 text-purple-400 border border-purple-500/20" : "bg-white/5 text-white/80 border border-white/10 hover:bg-white/10"}`}
+                  >
+                    <Headphones className="w-4 h-4" /> Podcasts
+                  </button>
+                  <button
+                    onClick={() => handleFilterChange(ContentKind.GUIDE)}
+                    className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm whitespace-nowrap transition-all ${activeFilter === ContentKind.GUIDE ? "bg-gradient-to-r from-yellow-500/20 to-yellow-500/5 text-yellow-400 border border-yellow-500/20" : "bg-white/5 text-white/80 border border-white/10 hover:bg-white/10"}`}
+                  >
+                    <BookOpen className="w-4 h-4" /> Guides
+                  </button>
+                  <button className="flex items-center gap-1 px-3 py-2 rounded-lg text-sm whitespace-nowrap bg-white/5 text-white/80 border border-white/10 hover:bg-white/10 transition-all">
+                    <SlidersHorizontal className="w-4 h-4" /> More Filters
+                  </button>
+                </div>
+              </div>
             </div>
-            <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-2 md:pb-0">
-              <button
-                onClick={() => handleFilterChange("all")}
-                className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm whitespace-nowrap transition-all ${
-                  activeFilter === "all"
-                    ? "bg-gradient-to-r from-[#FF3366]/20 to-[#FF3366]/5 text-[#FF3366] border border-[#FF3366]/20 shadow-glow-sm"
-                    : "bg-white/5 text-white/80 border border-white/10 hover:bg-white/10"
-                }`}
-              >
-                <Filter className="w-4 h-4" />
-                All Types
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredContent.map((item) => (
+              <ContentCard
+                key={item.id}
+                title={item.title}
+                type={item.type as "video" | "article" | "podcast" | "guide"}
+                status={item.status}
+                accessType={item.accessType as "free" | "one-time" | "recurring" | "nft"}
+                date={item.date}
+                views={item.views}
+                likes={item.likes}
+                comments={item.comments}
+                thumbnailUrl={item.thumbnailUrl || "/placeholder.svg?height=200&width=300"}
+              />
+            ))}
+          </div>
+          <div className="mt-8 flex justify-center">
+            <div className="flex items-center gap-2">
+              <button className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-white/60 hover:bg-white/10 transition-all">
+                1
               </button>
-              <button
-                onClick={() => handleFilterChange("article")}
-                className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm whitespace-nowrap transition-all ${
-                  activeFilter === "article"
-                    ? "bg-gradient-to-r from-green-500/20 to-green-500/5 text-green-400 border border-green-500/20"
-                    : "bg-white/5 text-white/80 border border-white/10 hover:bg-white/10"
-                }`}
-              >
-                <FileText className="w-4 h-4" />
-                Articles
+              <button className="w-8 h-8 rounded-lg bg-gradient-to-r from-[#FF3366]/20 to-[#FF3366]/5 border border-[#FF3366]/20 flex items-center justify-center text-[#FF3366]">
+                2
               </button>
-              <button
-                onClick={() => handleFilterChange("video")}
-                className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm whitespace-nowrap transition-all ${
-                  activeFilter === "video"
-                    ? "bg-gradient-to-r from-blue-500/20 to-blue-500/5 text-blue-400 border border-blue-500/20"
-                    : "bg-white/5 text-white/80 border border-white/10 hover:bg-white/10"
-                }`}
-              >
-                <Video className="w-4 h-4" />
-                Videos
+              <button className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-white/60 hover:bg-white/10 transition-all">
+                3
               </button>
-              <button
-                onClick={() => handleFilterChange("podcast")}
-                className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm whitespace-nowrap transition-all ${
-                  activeFilter === "podcast"
-                    ? "bg-gradient-to-r from-purple-500/20 to-purple-500/5 text-purple-400 border border-purple-500/20"
-                    : "bg-white/5 text-white/80 border border-white/10 hover:bg-white/10"
-                }`}
-              >
-                <Headphones className="w-4 h-4" />
-                Podcasts
-              </button>
-              <button
-                onClick={() => handleFilterChange("guide")}
-                className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm whitespace-nowrap transition-all ${
-                  activeFilter === "guide"
-                    ? "bg-gradient-to-r from-yellow-500/20 to-yellow-500/5 text-yellow-400 border border-yellow-500/20"
-                    : "bg-white/5 text-white/80 border border-white/10 hover:bg-white/10"
-                }`}
-              >
-                <BookOpen className="w-4 h-4" />
-                Guides
-              </button>
-              <button className="flex items-center gap-1 px-3 py-2 rounded-lg text-sm whitespace-nowrap bg-white/5 text-white/80 border border-white/10 hover:bg-white/10 transition-all">
-                <SlidersHorizontal className="w-4 h-4" />
-                More Filters
+              <button className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-white/60 hover:bg-white/10 transition-all">
+                <ArrowRight className="w-4 h-4" />
               </button>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Content Grid */}
-      {filteredContent.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredContent.map((item) => (
-            <div
-              key={item.id}
-              className="glassmorphism-card rounded-xl border border-white/10 bg-white/5 backdrop-blur-md overflow-hidden hover:bg-white/10 transition-all group"
-            >
-              <div className="relative aspect-video bg-gradient-to-br from-[#161921]/80 to-[#0F1116]/80 overflow-hidden">
-                {/* SVG Placeholder */}
-                <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-[#161921] to-[#0F1116]">
-                  <div
-                    className={`w-16 h-16 rounded-full bg-gradient-to-br ${typeColors[item.type]} p-4 opacity-50 group-hover:opacity-70 transition-opacity`}
-                  >
-                    {typeIcons[item.type]}
-                  </div>
-                </div>
-
-                <div className="absolute top-2 right-2 flex gap-2">
-                  <span
-                    className={`text-xs px-2 py-1 rounded-md ${statusColors[item.status]} backdrop-blur-sm flex items-center`}
-                  >
-                    {statusIcons[item.status]}
-                    {item.status}
-                  </span>
-                  <span className={`text-xs px-2 py-1 rounded-md ${accessColors[item.accessType]} backdrop-blur-sm`}>
-                    {item.accessType}
-                  </span>
-                </div>
-              </div>
-
-              <div className="p-4">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <span className={`text-xs px-2 py-1 rounded-md bg-gradient-to-r ${typeColors[item.type]}`}>
-                      {item.type}
-                    </span>
-                    <h3 className="font-medium mt-2 text-white group-hover:text-[#FF3366] transition-colors line-clamp-1">
-                      {item.title}
-                    </h3>
-                    <div className="flex items-center gap-2 mt-1 text-xs text-white/60">
-                      <div className="flex items-center">
-                        <Calendar className="w-3 h-3 mr-1" />
-                        <span>{item.date}</span>
-                      </div>
-                      <span className="text-white/40">•</span>
-                      <div className="flex items-center">
-                        <Clock className="w-3 h-3 mr-1" />
-                        <span>{item.duration}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="relative">
-                    <button
-                      onClick={() => handleMenuToggle(item.id)}
-                      className="p-1 rounded-md hover:bg-white/10 transition-colors"
-                    >
-                      <MoreVertical className="w-4 h-4 text-white/60" />
-                    </button>
-
-                    {menuOpen === item.id && (
-                      <div className="absolute right-0 mt-1 w-36 glassmorphism-card bg-white/5 border border-white/10 rounded-lg shadow-lg z-10 backdrop-blur-md">
-                        <button
-                          onClick={() => handleEdit(item.id)}
-                          className="flex items-center w-full gap-2 px-3 py-2 text-xs hover:bg-white/10 transition-colors text-white/80"
-                        >
-                          <Edit className="w-3 h-3" />
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleViewOnChain(item.id)}
-                          className="flex items-center w-full gap-2 px-3 py-2 text-xs hover:bg-white/10 transition-colors text-white/80"
-                        >
-                          <ExternalLink className="w-3 h-3" />
-                          View on Chain
-                        </button>
-                        <button
-                          onClick={() => handleDelete(item.id)}
-                          className="flex items-center w-full gap-2 px-3 py-2 text-xs text-red-400 hover:bg-white/10 transition-colors"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                          Delete
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-4 mt-3">
-                  <div className="flex items-center gap-1 text-xs text-white/60">
-                    <Eye className="w-3 h-3" />
-                    <span>{item.views.toLocaleString()}</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-xs text-white/60">
-                    <Heart className="w-3 h-3" />
-                    <span>{item.likes.toLocaleString()}</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-xs text-white/60">
-                    <MessageSquare className="w-3 h-3" />
-                    <span>{item.comments.toLocaleString()}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : (
+        </>
+      )
+    } else {
+      return (
         <div className="glassmorphism-card rounded-xl border border-white/10 bg-white/5 backdrop-blur-md p-8 text-center">
           <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#FF3366]/20 to-[#FF3366]/5 mx-auto flex items-center justify-center mb-4">
             <FileText className="w-8 h-8 text-[#FF3366]" />
@@ -425,7 +319,7 @@ export default function ContentPage() {
           <p className="text-white/60 mb-4">
             {searchQuery
               ? `No results found for "${searchQuery}"`
-              : "You haven't created any content matching these filters yet."}
+              : "You haven't created any content yet, or there was an issue connecting to your wallet."}
           </p>
           <button
             onClick={handleNewContent}
@@ -435,27 +329,14 @@ export default function ContentPage() {
             <span>Create New Content</span>
           </button>
         </div>
-      )}
+      )
+    }
+  }
 
-      {/* Pagination */}
-      {filteredContent.length > 0 && (
-        <div className="mt-8 flex justify-center">
-          <div className="flex items-center gap-2">
-            <button className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-white/60 hover:bg-white/10 transition-all">
-              1
-            </button>
-            <button className="w-8 h-8 rounded-lg bg-gradient-to-r from-[#FF3366]/20 to-[#FF3366]/5 border border-[#FF3366]/20 flex items-center justify-center text-[#FF3366]">
-              2
-            </button>
-            <button className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-white/60 hover:bg-white/10 transition-all">
-              3
-            </button>
-            <button className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-white/60 hover:bg-white/10 transition-all">
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      )}
+  return (
+    <DashboardLayout>
+      {renderHeader()}
+      {renderPageContent()}
     </DashboardLayout>
   )
 }

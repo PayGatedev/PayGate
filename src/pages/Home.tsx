@@ -1,12 +1,12 @@
 "use client"
 
 import type React from "react"
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { useWallet } from "@solana/wallet-adapter-react"
 import { useWalletModal } from "@solana/wallet-adapter-react-ui"
+import { Link, useNavigate } from "react-router-dom"
 import {
   Bell,
-  LayoutDashboard,
   Search,
   TrendingUp,
   Users,
@@ -23,136 +23,41 @@ import {
   FileText,
   Headphones,
   BookOpen,
-  Vote,
-  Coins,
-  Split,
-  Shield,
+  Flame,
+  Plus,
+  Compass,
+  Bookmark,
+  Award,
+  PlusCircle,
   Clock,
+  Loader2,
+  AlertCircle,
 } from "lucide-react"
-import { Link } from "react-router-dom"
-import { WalletButton } from "@/components/wallet-button"
+import { WalletButton } from "../components/wallet-button"
 
-// Mock data for the feed with all content types
-const mockFeed = [
-  {
-    id: 1,
-    type: "video",
-    title: "The Future of Decentralized Content",
-    creator: "CryptoVisionary",
-    views: "24K",
-    timeAgo: "2 days ago",
-    duration: "12:45",
-    trending: true,
-    tier: "Basic",
-    description: "Exploring how blockchain technology is revolutionizing content creation and distribution...",
-  },
-  {
-    id: 2,
-    type: "article",
-    title: "Complete Guide to NFT Collections",
-    creator: "NFT_Master",
-    views: "18K",
-    timeAgo: "5 days ago",
-    readTime: "8 min read",
-    exclusive: true,
-    tier: "Premium",
-    description: "Learn the step-by-step process to create and launch your first NFT collection on Solana...",
-  },
-  {
-    id: 3,
-    type: "podcast",
-    title: "Web3 Gaming Revolution - Episode 12",
-    creator: "GameChanger",
-    views: "12K",
-    timeAgo: "1 week ago",
-    duration: "45:18",
-    trending: true,
-    tier: "Basic",
-    description: "Discussing the latest developments in blockchain gaming and the future of play-to-earn...",
-  },
-  {
-    id: 4,
-    type: "guide",
-    title: "Tokenomics Explained: A Beginner's Guide",
-    creator: "CryptoEducator",
-    views: "31K",
-    timeAgo: "2 weeks ago",
-    chapters: "5 chapters",
-    tier: "Free",
-    description: "Understanding the economic models behind successful crypto projects...",
-  },
-  {
-    id: 5,
-    type: "video",
-    title: "Advanced Smart Contract Development",
-    creator: "BlockchainDev",
-    views: "20K",
-    timeAgo: "3 weeks ago",
-    duration: "32:43",
-    exclusive: true,
-    tier: "Premium",
-    description: "Deep dive into advanced smart contract patterns and security best practices...",
-  },
-  {
-    id: 6,
-    type: "article",
-    title: "The Complete Guide to DeFi Staking",
-    creator: "DeFi_Guru",
-    views: "15K",
-    timeAgo: "1 month ago",
-    readTime: "12 min read",
-    tier: "Basic",
-    description: "Everything you need to know about staking your assets in DeFi protocols...",
-  },
-  {
-    id: 7,
-    type: "podcast",
-    title: "Blockchain Security Best Practices",
-    creator: "SecurityExpert",
-    views: "28K",
-    timeAgo: "1 month ago",
-    duration: "52:24",
-    trending: true,
-    tier: "Premium",
-    description: "Essential security practices every blockchain developer and user should know...",
-  },
-  {
-    id: 8,
-    type: "guide",
-    title: "How to Create a DAO from Scratch",
-    creator: "DAObuilder",
-    views: "22K",
-    timeAgo: "2 months ago",
-    chapters: "8 chapters",
-    tier: "Basic",
-    description:
-      "Step-by-step instructions for building and launching your own decentralized autonomous organization...",
-  },
-  {
-    id: 9,
-    type: "video",
-    title: "NFT Marketplace Development Tutorial",
-    creator: "Web3Wizard",
-    views: "19K",
-    timeAgo: "2 months ago",
-    duration: "28:15",
-    tier: "Premium",
-    description: "Learn how to build your own NFT marketplace from scratch using Solana...",
-  },
-  {
-    id: 10,
-    type: "article",
-    title: "Revenue Splitting with Smart Contracts",
-    creator: "CryptoLawyer",
-    views: "14K",
-    timeAgo: "3 months ago",
-    readTime: "10 min read",
-    tier: "Basic",
-    description: "How to implement automatic revenue splitting for creator collaborations using smart contracts...",
-  },
-]
+// Types for the content data
+interface HomePageFeedItem {
+  id: string
+  type: string
+  title: string
+  description: string
+  thumbnailUrl?: string
+  creatorName: string
+  creatorWalletAddress: string
+  views: number
+  likes: number
+  comments: number
+  createdAt: string
+  duration?: string
+  readTime?: string
+  chapters?: string
+  accessType: string
+  price?: number
+  isPublic: boolean
+  isDraft: boolean
+}
 
-// Mock data for trending creators
+// Mock data for trending creators (keeping this as it's not part of the content API)
 const trendingCreators = [
   {
     name: "CryptoArtist",
@@ -181,36 +86,50 @@ const trendingCreators = [
   },
 ]
 
-// Mock data for active proposals
-const activeProposals = [
-  {
-    id: 1,
-    title: "Create a series on DeFi fundamentals",
-    votes: 234,
-    daysLeft: 3,
-  },
-  {
-    id: 2,
-    title: "Launch an NFT collection for subscribers",
-    votes: 187,
-    daysLeft: 5,
-  },
-  {
-    id: 3,
-    title: "Start a weekly podcast on crypto news",
-    votes: 156,
-    daysLeft: 2,
-  },
-]
-
-const UserFeed: React.FC = () => {
+const Home: React.FC = () => {
   const wallet = useWallet()
   const { setVisible } = useWalletModal()
   const [activeTab, setActiveTab] = useState("home")
   const [activeCategory, setActiveCategory] = useState("all")
   const [notifications, setNotifications] = useState(3)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [showCreateModal, setShowCreateModal] = useState(false)
   const mainContentRef = useRef<HTMLDivElement>(null)
+  const navigate = useNavigate()
+
+  // State for content data
+  const [contentFeed, setContentFeed] = useState<HomePageFeedItem[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  // Fetch content from API
+  useEffect(() => {
+    const fetchContent = async () => {
+      try {
+        setIsLoading(true)
+        setError(null)
+
+        const response = await fetch("https://paygate-dyof.onrender.com/api/content")
+        if (!response.ok) {
+          throw new Error(`Failed to fetch content: ${response.status} ${response.statusText}`)
+        }
+
+        const data: HomePageFeedItem[] = await response.json()
+
+        // Filter out drafts and non-public content for the public feed
+        const publicContent = data.filter((item) => item.isPublic && !item.isDraft)
+
+        setContentFeed(publicContent)
+      } catch (err) {
+        console.error("Error fetching content:", err)
+        setError(err instanceof Error ? err.message : "Failed to load content")
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchContent()
+  }, [])
 
   const handleConnectWallet = () => {
     if (!wallet.connected) {
@@ -218,9 +137,23 @@ const UserFeed: React.FC = () => {
     }
   }
 
+  // Close sidebar when clicking outside on mobile
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (sidebarOpen && mainContentRef.current && !mainContentRef.current.contains(event.target as Node)) {
+        setSidebarOpen(false)
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+    }
+  }, [sidebarOpen])
+
   // Function to get content type icon
   const getContentTypeIcon = (type: string) => {
-    switch (type) {
+    switch (type.toLowerCase()) {
       case "video":
         return <Video className="w-8 h-8 text-gray-600" />
       case "article":
@@ -234,24 +167,135 @@ const UserFeed: React.FC = () => {
     }
   }
 
+  // Function to get small content type icon
+  const getSmallContentTypeIcon = (type: string) => {
+    switch (type.toLowerCase()) {
+      case "video":
+        return <Video className="w-3 h-3" />
+      case "article":
+        return <FileText className="w-3 h-3" />
+      case "podcast":
+        return <Headphones className="w-3 h-3" />
+      case "guide":
+        return <BookOpen className="w-3 h-3" />
+      default:
+        return <Video className="w-3 h-3" />
+    }
+  }
+
+  // Function to format time ago
+  const formatTimeAgo = (dateString: string) => {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffInMs = now.getTime() - date.getTime()
+    const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24))
+
+    if (diffInDays === 0) return "Today"
+    if (diffInDays === 1) return "1 day ago"
+    if (diffInDays < 7) return `${diffInDays} days ago`
+    if (diffInDays < 30) return `${Math.floor(diffInDays / 7)} weeks ago`
+    if (diffInDays < 365) return `${Math.floor(diffInDays / 30)} months ago`
+    return `${Math.floor(diffInDays / 365)} years ago`
+  }
+
+  // Function to format numbers
+  const formatNumber = (num: number) => {
+    if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`
+    if (num >= 1000) return `${(num / 1000).toFixed(1)}K`
+    return num.toString()
+  }
+
   // Filter content based on active category
-  const filteredContent = activeCategory === "all" ? mockFeed : mockFeed.filter((item) => item.type === activeCategory)
+  const filteredContent =
+    activeCategory === "all"
+      ? contentFeed
+      : contentFeed.filter((item) => item.type.toLowerCase() === activeCategory.toLowerCase())
+
+  // Get trending content (most viewed in last 7 days)
+  const trendingContent = contentFeed
+    .filter((item) => {
+      const daysSinceCreated = (new Date().getTime() - new Date(item.createdAt).getTime()) / (1000 * 60 * 60 * 24)
+      return daysSinceCreated <= 7
+    })
+    .sort((a, b) => b.views - a.views)
+    .slice(0, 3)
+
+  const handleContentClick = (content: HomePageFeedItem) => {
+    navigate(`/${content.type.toLowerCase()}/${content.id}`)
+  }
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="h-screen flex flex-col bg-gradient-to-br from-[#0F1116] to-[#0A0A0B] text-white">
+        <header className="bg-[#0A0A0B]/90 backdrop-blur-md border-b border-gray-800 z-50 flex-shrink-0 shadow-md">
+          <div className="flex items-center justify-between px-4 py-2">
+            <div className="flex items-center">
+              <div className="w-8 h-8 bg-gradient-to-br from-[#FF3366] to-[#FF6699] rounded-md flex items-center justify-center shadow-glow-sm">
+                <Zap className="w-4 h-4 text-white" />
+              </div>
+              <span className="text-[#FF3366] font-bold text-xl ml-2">PayGate</span>
+            </div>
+            <WalletButton />
+          </div>
+        </header>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <Loader2 className="w-12 h-12 animate-spin text-[#FF3366] mx-auto mb-4" />
+            <p className="text-white/80">Loading content...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="h-screen flex flex-col bg-gradient-to-br from-[#0F1116] to-[#0A0A0B] text-white">
+        <header className="bg-[#0A0A0B]/90 backdrop-blur-md border-b border-gray-800 z-50 flex-shrink-0 shadow-md">
+          <div className="flex items-center justify-between px-4 py-2">
+            <div className="flex items-center">
+              <div className="w-8 h-8 bg-gradient-to-br from-[#FF3366] to-[#FF6699] rounded-md flex items-center justify-center shadow-glow-sm">
+                <Zap className="w-4 h-4 text-white" />
+              </div>
+              <span className="text-[#FF3366] font-bold text-xl ml-2">PayGate</span>
+            </div>
+            <WalletButton />
+          </div>
+        </header>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center max-w-md mx-auto p-6">
+            <AlertCircle className="w-16 h-16 text-red-400 mx-auto mb-4" />
+            <h3 className="text-xl font-bold mb-2">Failed to Load Content</h3>
+            <p className="text-white/60 mb-4">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="bg-gradient-to-r from-[#FF3366] to-[#FF6699] text-white px-6 py-2 rounded-lg hover:from-[#FF6699] hover:to-[#FF3366] transition-all shadow-glow-sm"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="h-screen flex flex-col bg-[#0F1116] text-white font-sans overflow-hidden">
-      {/* Header - YouTube-like */}
-      <header className="bg-[#0A0A0B] border-b border-gray-800 z-50 flex-shrink-0">
+    <div className="h-screen flex flex-col bg-gradient-to-br from-[#0F1116] to-[#0A0A0B] text-white font-sans overflow-hidden">
+      {/* Header - YouTube-like with dashboard styling */}
+      <header className="bg-[#0A0A0B]/90 backdrop-blur-md border-b border-gray-800 z-50 flex-shrink-0 shadow-md">
         <div className="flex items-center justify-between px-4 py-2">
           {/* Left section with logo and menu */}
           <div className="flex items-center">
             <button
-              className="p-2 mr-2 rounded-full hover:bg-[#161921] lg:hidden"
+              className="p-2 mr-2 rounded-md hover:bg-[#161921] transition-colors"
               onClick={() => setSidebarOpen(!sidebarOpen)}
             >
               {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
             <div className="flex items-center">
-              <div className="w-8 h-8 bg-[#FF3366] rounded-md flex items-center justify-center">
+              <div className="w-8 h-8 bg-gradient-to-br from-[#FF3366] to-[#FF6699] rounded-md flex items-center justify-center shadow-glow-sm">
                 <Zap className="w-4 h-4 text-white" />
               </div>
               <span className="text-[#FF3366] font-bold text-xl ml-2">PayGate</span>
@@ -264,9 +308,9 @@ const UserFeed: React.FC = () => {
               <input
                 type="text"
                 placeholder="Search"
-                className="w-full bg-[#161921] border border-gray-800 rounded-l-full py-2 pl-4 pr-4 text-sm focus:outline-none"
+                className="w-full bg-[#161921] border border-gray-800 rounded-l-full py-2 pl-4 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-[#FF3366]/30 transition-all"
               />
-              <button className="bg-[#161921] border border-l-0 border-gray-800 rounded-r-full px-4 hover:bg-[#1e212b]">
+              <button className="bg-[#161921] border border-l-0 border-gray-800 rounded-r-full px-4 hover:bg-[#1e212b] transition-colors">
                 <Search className="w-5 h-5 text-gray-400" />
               </button>
             </div>
@@ -274,24 +318,15 @@ const UserFeed: React.FC = () => {
 
           {/* Right section with actions */}
           <div className="flex items-center space-x-4">
-            <button className="md:hidden p-2 rounded-full hover:bg-[#161921]">
+            <button className="md:hidden p-2 rounded-md hover:bg-[#161921] transition-colors">
               <Search className="w-5 h-5" />
             </button>
 
-            {/* Dashboard button */}
-            <Link
-              to="/dashboard"
-              className="hidden md:flex items-center gap-2 bg-[#FF3366] text-white px-3 py-1.5 rounded-md hover:bg-[#FF3366]/90 transition-colors"
-            >
-              <LayoutDashboard className="w-4 h-4" />
-              <span>Dashboard</span>
-            </Link>
-
             {/* Notification bell */}
-            <button className="relative p-2 rounded-full hover:bg-[#161921]">
+            <button className="relative p-2 rounded-md hover:bg-[#161921] transition-colors">
               <Bell className="w-5 h-5" />
               {notifications > 0 && (
-                <span className="absolute top-0 right-0 w-4 h-4 bg-[#FF3366] rounded-full text-xs flex items-center justify-center">
+                <span className="absolute top-0 right-0 w-4 h-4 bg-[#FF3366] rounded-full text-xs flex items-center justify-center shadow-glow-sm">
                   {notifications}
                 </span>
               )}
@@ -303,110 +338,113 @@ const UserFeed: React.FC = () => {
         </div>
       </header>
 
-      {/* Main content with YouTube-like layout */}
+      {/* Main content with YouTube-like layout and dashboard styling */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar - YouTube-like */}
+        {/* Sidebar - YouTube-like with dashboard styling */}
         <aside
-          className={`fixed top-[53px] bottom-0 left-0 w-64 bg-[#0A0A0B] border-r border-gray-800 z-40 transition-transform duration-300 lg:translate-x-0 overflow-y-auto ${
+          className={`fixed top-[53px] bottom-0 left-0 w-64 bg-[#0A0A0B]/90 backdrop-blur-md border-r border-gray-800 z-40 transition-transform duration-300 lg:translate-x-0 overflow-y-auto ${
             sidebarOpen ? "translate-x-0" : "-translate-x-full"
           } lg:static lg:h-full`}
         >
           <div className="py-4 px-3">
-            {/* Main navigation */}
+            {/* Main navigation - User focused */}
             <div className="mb-6">
               <button
-                className={`w-full flex items-center gap-3 p-2.5 rounded-md text-left ${
-                  activeTab === "home" ? "bg-[#161921] font-medium" : "text-gray-300 hover:bg-[#161921]/50"
+                className={`w-full flex items-center gap-3 p-2.5 rounded-md text-left transition-colors ${
+                  activeTab === "home"
+                    ? "bg-gradient-to-r from-[#FF3366]/20 to-[#FF3366]/5 text-[#FF3366] border border-[#FF3366]/20 shadow-glow-sm"
+                    : "text-gray-300 hover:bg-[#161921]/50"
                 }`}
                 onClick={() => setActiveTab("home")}
               >
-                <HomeIcon className="w-5 h-5" />
+                <HomeIcon className={`w-5 h-5 ${activeTab === "home" ? "text-[#FF3366]" : "text-gray-400"}`} />
                 <span>Home</span>
               </button>
 
               <button
-                className={`w-full flex items-center gap-3 p-2.5 rounded-md text-left ${
-                  activeTab === "trending" ? "bg-[#161921] font-medium" : "text-gray-300 hover:bg-[#161921]/50"
+                className={`w-full flex items-center gap-3 p-2.5 rounded-md text-left transition-colors ${
+                  activeTab === "trending"
+                    ? "bg-gradient-to-r from-[#FF3366]/20 to-[#FF3366]/5 text-[#FF3366] border border-[#FF3366]/20 shadow-glow-sm"
+                    : "text-gray-300 hover:bg-[#161921]/50"
                 }`}
                 onClick={() => setActiveTab("trending")}
               >
-                <TrendingUp className="w-5 h-5" />
+                <TrendingUp className={`w-5 h-5 ${activeTab === "trending" ? "text-[#FF3366]" : "text-gray-400"}`} />
                 <span>Trending</span>
               </button>
 
               <button
-                className={`w-full flex items-center gap-3 p-2.5 rounded-md text-left ${
-                  activeTab === "subscriptions" ? "bg-[#161921] font-medium" : "text-gray-300 hover:bg-[#161921]/50"
+                className={`w-full flex items-center gap-3 p-2.5 rounded-md text-left transition-colors ${
+                  activeTab === "subscriptions"
+                    ? "bg-gradient-to-r from-[#FF3366]/20 to-[#FF3366]/5 text-[#FF3366] border border-[#FF3366]/20 shadow-glow-sm"
+                    : "text-gray-300 hover:bg-[#161921]/50"
                 }`}
                 onClick={() => setActiveTab("subscriptions")}
               >
-                <Users className="w-5 h-5" />
+                <Users className={`w-5 h-5 ${activeTab === "subscriptions" ? "text-[#FF3366]" : "text-gray-400"}`} />
                 <span>Subscriptions</span>
+              </button>
+
+              <button
+                className={`w-full flex items-center gap-3 p-2.5 rounded-md text-left transition-colors ${
+                  activeTab === "explore"
+                    ? "bg-gradient-to-r from-[#FF3366]/20 to-[#FF3366]/5 text-[#FF3366] border border-[#FF3366]/20 shadow-glow-sm"
+                    : "text-gray-300 hover:bg-[#161921]/50"
+                }`}
+                onClick={() => setActiveTab("explore")}
+              >
+                <Compass className={`w-5 h-5 ${activeTab === "explore" ? "text-[#FF3366]" : "text-gray-400"}`} />
+                <span>Explore</span>
               </button>
             </div>
 
             <div className="border-t border-gray-800 pt-4 mb-6">
               <button
-                className={`w-full flex items-center gap-3 p-2.5 rounded-md text-left ${
-                  activeTab === "library" ? "bg-[#161921] font-medium" : "text-gray-300 hover:bg-[#161921]/50"
+                className={`w-full flex items-center gap-3 p-2.5 rounded-md text-left transition-colors ${
+                  activeTab === "library"
+                    ? "bg-gradient-to-r from-[#FF3366]/20 to-[#FF3366]/5 text-[#FF3366] border border-[#FF3366]/20 shadow-glow-sm"
+                    : "text-gray-300 hover:bg-[#161921]/50"
                 }`}
                 onClick={() => setActiveTab("library")}
               >
-                <PlaySquare className="w-5 h-5" />
+                <PlaySquare className={`w-5 h-5 ${activeTab === "library" ? "text-[#FF3366]" : "text-gray-400"}`} />
                 <span>Library</span>
               </button>
 
               <button
-                className={`w-full flex items-center gap-3 p-2.5 rounded-md text-left ${
-                  activeTab === "history" ? "bg-[#161921] font-medium" : "text-gray-300 hover:bg-[#161921]/50"
+                className={`w-full flex items-center gap-3 p-2.5 rounded-md text-left transition-colors ${
+                  activeTab === "history"
+                    ? "bg-gradient-to-r from-[#FF3366]/20 to-[#FF3366]/5 text-[#FF3366] border border-[#FF3366]/20 shadow-glow-sm"
+                    : "text-gray-300 hover:bg-[#161921]/50"
                 }`}
                 onClick={() => setActiveTab("history")}
               >
-                <History className="w-5 h-5" />
+                <History className={`w-5 h-5 ${activeTab === "history" ? "text-[#FF3366]" : "text-gray-400"}`} />
                 <span>History</span>
               </button>
 
               <button
-                className={`w-full flex items-center gap-3 p-2.5 rounded-md text-left ${
-                  activeTab === "liked" ? "bg-[#161921] font-medium" : "text-gray-300 hover:bg-[#161921]/50"
+                className={`w-full flex items-center gap-3 p-2.5 rounded-md text-left transition-colors ${
+                  activeTab === "liked"
+                    ? "bg-gradient-to-r from-[#FF3366]/20 to-[#FF3366]/5 text-[#FF3366] border border-[#FF3366]/20 shadow-glow-sm"
+                    : "text-gray-300 hover:bg-[#161921]/50"
                 }`}
                 onClick={() => setActiveTab("liked")}
               >
-                <ThumbsUp className="w-5 h-5" />
+                <ThumbsUp className={`w-5 h-5 ${activeTab === "liked" ? "text-[#FF3366]" : "text-gray-400"}`} />
                 <span>Liked Content</span>
               </button>
-            </div>
-
-            {/* Platform features */}
-            <div className="border-t border-gray-800 pt-4 mb-6">
-              <h3 className="text-sm font-medium text-gray-400 mb-2 px-3">PLATFORM FEATURES</h3>
 
               <button
-                className={`w-full flex items-center gap-3 p-2.5 rounded-md text-left text-gray-300 hover:bg-[#161921]/50`}
+                className={`w-full flex items-center gap-3 p-2.5 rounded-md text-left transition-colors ${
+                  activeTab === "bookmarks"
+                    ? "bg-gradient-to-r from-[#FF3366]/20 to-[#FF3366]/5 text-[#FF3366] border border-[#FF3366]/20 shadow-glow-sm"
+                    : "text-gray-300 hover:bg-[#161921]/50"
+                }`}
+                onClick={() => setActiveTab("bookmarks")}
               >
-                <Vote className="w-5 h-5" />
-                <span>DAO Proposals</span>
-              </button>
-
-              <button
-                className={`w-full flex items-center gap-3 p-2.5 rounded-md text-left text-gray-300 hover:bg-[#161921]/50`}
-              >
-                <Coins className="w-5 h-5" />
-                <span>Subscription Plans</span>
-              </button>
-
-              <button
-                className={`w-full flex items-center gap-3 p-2.5 rounded-md text-left text-gray-300 hover:bg-[#161921]/50`}
-              >
-                <Split className="w-5 h-5" />
-                <span>Revenue Splitting</span>
-              </button>
-
-              <button
-                className={`w-full flex items-center gap-3 p-2.5 rounded-md text-left text-gray-300 hover:bg-[#161921]/50`}
-              >
-                <Shield className="w-5 h-5" />
-                <span>Smart Contracts</span>
+                <Bookmark className={`w-5 h-5 ${activeTab === "bookmarks" ? "text-[#FF3366]" : "text-gray-400"}`} />
+                <span>Bookmarks</span>
               </button>
             </div>
 
@@ -416,107 +454,176 @@ const UserFeed: React.FC = () => {
               {trendingCreators.map((creator, index) => (
                 <button
                   key={index}
-                  className="w-full flex items-center gap-3 p-2.5 rounded-md text-left text-gray-300 hover:bg-[#161921]/50"
+                  className="w-full flex items-center gap-3 p-2.5 rounded-md text-left text-gray-300 hover:bg-[#161921]/50 transition-colors"
                 >
-                  <div className="w-6 h-6 rounded-full bg-[#FF3366]/10 flex items-center justify-center">
+                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#FF3366]/20 to-[#FF3366]/5 flex items-center justify-center shadow-glow-sm">
                     <Users className="w-3 h-3 text-[#FF3366]" />
                   </div>
                   <span className="truncate">{creator.name}</span>
                 </button>
               ))}
 
-              <button className="w-full flex items-center gap-3 p-2.5 rounded-md text-left text-gray-300 hover:bg-[#161921]/50">
+              <button className="w-full flex items-center gap-3 p-2.5 rounded-md text-left text-gray-300 hover:bg-[#161921]/50 transition-colors">
                 <ChevronDown className="w-5 h-5" />
                 <span>Show more</span>
               </button>
             </div>
 
-            {/* Dashboard link */}
+            {/* Explore content types */}
+            <div className="border-t border-gray-800 mt-4 pt-4">
+              <h3 className="text-sm font-medium text-gray-400 mb-2 px-3">EXPLORE</h3>
+
+              <button className="w-full flex items-center gap-3 p-2.5 rounded-md text-left text-gray-300 hover:bg-[#161921]/50 transition-colors">
+                <Video className="w-5 h-5 text-gray-400" />
+                <span>Videos</span>
+              </button>
+
+              <button className="w-full flex items-center gap-3 p-2.5 rounded-md text-left text-gray-300 hover:bg-[#161921]/50 transition-colors">
+                <FileText className="w-5 h-5 text-gray-400" />
+                <span>Articles</span>
+              </button>
+
+              <button className="w-full flex items-center gap-3 p-2.5 rounded-md text-left text-gray-300 hover:bg-[#161921]/50 transition-colors">
+                <Headphones className="w-5 h-5 text-gray-400" />
+                <span>Podcasts</span>
+              </button>
+
+              <button className="w-full flex items-center gap-3 p-2.5 rounded-md text-left text-gray-300 hover:bg-[#161921]/50 transition-colors">
+                <BookOpen className="w-5 h-5 text-gray-400" />
+                <span>Guides</span>
+              </button>
+            </div>
+
+            {/* Become a creator button */}
             <div className="border-t border-gray-800 mt-4 pt-4">
               <Link
-                to="/dashboard"
-                className="w-full flex items-center gap-3 p-2.5 rounded-md text-left text-[#FF3366] hover:bg-[#161921]/50"
+                to="/apply"
+                className="w-full flex items-center gap-3 p-2.5 rounded-md text-left text-[#FF3366] hover:bg-[#161921]/50 transition-colors"
               >
-                <LayoutDashboard className="w-5 h-5" />
-                <span>Go to Dashboard</span>
+                <PlusCircle className="w-5 h-5" />
+                <span>Become a Creator</span>
               </Link>
             </div>
           </div>
         </aside>
 
-        {/* Main content - Scrollable */}
+        {/* Main content - Scrollable with dashboard styling */}
         <main ref={mainContentRef} className="flex-1 overflow-y-auto">
           <div className="py-6 px-4">
-            {/* Category chips - YouTube-like */}
-            <div className="flex items-center space-x-2 overflow-x-auto pb-4 mb-6 hide-scrollbar sticky top-0 bg-[#0F1116] z-10 py-2">
+            {/* Category chips - YouTube-like with dashboard styling */}
+            <div className="flex items-center space-x-2 overflow-x-auto pb-4 mb-6 hide-scrollbar sticky top-0 bg-gradient-to-r from-[#0F1116] to-[#0A0A0B] z-10 py-2">
               <button
-                className={`${activeCategory === "all" ? "bg-[#FF3366] text-white" : "bg-[#161921] hover:bg-[#1e212b]"} px-3 py-1 rounded-full text-sm whitespace-nowrap`}
+                className={`${
+                  activeCategory === "all"
+                    ? "bg-gradient-to-r from-[#FF3366] to-[#FF6699] text-white shadow-glow-sm"
+                    : "bg-[#161921] hover:bg-[#1e212b] border border-gray-800"
+                } px-3 py-1 rounded-md text-sm whitespace-nowrap transition-all`}
                 onClick={() => setActiveCategory("all")}
               >
                 All
               </button>
               <button
-                className={`${activeCategory === "video" ? "bg-[#FF3366] text-white" : "bg-[#161921] hover:bg-[#1e212b]"} px-3 py-1 rounded-full text-sm whitespace-nowrap flex items-center gap-1`}
+                className={`${
+                  activeCategory === "video"
+                    ? "bg-gradient-to-r from-[#FF3366] to-[#FF6699] text-white shadow-glow-sm"
+                    : "bg-[#161921] hover:bg-[#1e212b] border border-gray-800"
+                } px-3 py-1 rounded-md text-sm whitespace-nowrap flex items-center gap-1 transition-all`}
                 onClick={() => setActiveCategory("video")}
               >
                 <Video className="w-3 h-3" /> Videos
               </button>
               <button
-                className={`${activeCategory === "article" ? "bg-[#FF3366] text-white" : "bg-[#161921] hover:bg-[#1e212b]"} px-3 py-1 rounded-full text-sm whitespace-nowrap flex items-center gap-1`}
+                className={`${
+                  activeCategory === "article"
+                    ? "bg-gradient-to-r from-[#FF3366] to-[#FF6699] text-white shadow-glow-sm"
+                    : "bg-[#161921] hover:bg-[#1e212b] border border-gray-800"
+                } px-3 py-1 rounded-md text-sm whitespace-nowrap flex items-center gap-1 transition-all`}
                 onClick={() => setActiveCategory("article")}
               >
                 <FileText className="w-3 h-3" /> Articles
               </button>
               <button
-                className={`${activeCategory === "podcast" ? "bg-[#FF3366] text-white" : "bg-[#161921] hover:bg-[#1e212b]"} px-3 py-1 rounded-full text-sm whitespace-nowrap flex items-center gap-1`}
+                className={`${
+                  activeCategory === "podcast"
+                    ? "bg-gradient-to-r from-[#FF3366] to-[#FF6699] text-white shadow-glow-sm"
+                    : "bg-[#161921] hover:bg-[#1e212b] border border-gray-800"
+                } px-3 py-1 rounded-md text-sm whitespace-nowrap flex items-center gap-1 transition-all`}
                 onClick={() => setActiveCategory("podcast")}
               >
                 <Headphones className="w-3 h-3" /> Podcasts
               </button>
               <button
-                className={`${activeCategory === "guide" ? "bg-[#FF3366] text-white" : "bg-[#161921] hover:bg-[#1e212b]"} px-3 py-1 rounded-full text-sm whitespace-nowrap flex items-center gap-1`}
+                className={`${
+                  activeCategory === "guide"
+                    ? "bg-gradient-to-r from-[#FF3366] to-[#FF6699] text-white shadow-glow-sm"
+                    : "bg-[#161921] hover:bg-[#1e212b] border border-gray-800"
+                } px-3 py-1 rounded-md text-sm whitespace-nowrap flex items-center gap-1 transition-all`}
                 onClick={() => setActiveCategory("guide")}
               >
                 <BookOpen className="w-3 h-3" /> Guides
               </button>
-              <button className="bg-[#161921] hover:bg-[#1e212b] px-3 py-1 rounded-full text-sm whitespace-nowrap">
+              <button className="bg-[#161921] hover:bg-[#1e212b] border border-gray-800 px-3 py-1 rounded-md text-sm whitespace-nowrap transition-all">
                 NFTs
               </button>
-              <button className="bg-[#161921] hover:bg-[#1e212b] px-3 py-1 rounded-full text-sm whitespace-nowrap">
+              <button className="bg-[#161921] hover:bg-[#1e212b] border border-gray-800 px-3 py-1 rounded-md text-sm whitespace-nowrap transition-all">
                 DeFi
               </button>
-              <button className="bg-[#161921] hover:bg-[#1e212b] px-3 py-1 rounded-full text-sm whitespace-nowrap">
+              <button className="bg-[#161921] hover:bg-[#1e212b] border border-gray-800 px-3 py-1 rounded-md text-sm whitespace-nowrap transition-all">
                 Gaming
               </button>
-              <button className="bg-[#161921] hover:bg-[#1e212b] px-3 py-1 rounded-full text-sm whitespace-nowrap">
+              <button className="bg-[#161921] hover:bg-[#1e212b] border border-gray-800 px-3 py-1 rounded-md text-sm whitespace-nowrap transition-all">
                 DAOs
               </button>
             </div>
 
-            {/* Active DAO Proposals */}
-            {activeTab === "home" && (
-              <div className="mb-8 bg-[#161921] rounded-md p-4 border border-gray-800">
+            {/* Trending section with dashboard styling */}
+            {activeTab === "home" && trendingContent.length > 0 && (
+              <div className="mb-8">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="font-medium flex items-center gap-2">
-                    <Vote className="w-4 h-4 text-[#FF3366]" />
-                    Active DAO Proposals
+                    <Flame className="w-4 h-4 text-[#FF3366]" />
+                    <span className="bg-gradient-to-r from-[#FF3366] to-[#FF6699] text-transparent bg-clip-text">
+                      Trending Now
+                    </span>
                   </h3>
-                  <Link to="/dashboard/proposals" className="text-[#FF3366] text-sm hover:underline">
-                    View All
-                  </Link>
+                  <button className="text-[#FF3366] text-sm hover:text-[#FF6699] transition-colors">See all</button>
                 </div>
-                <div className="space-y-3">
-                  {activeProposals.map((proposal) => (
-                    <div key={proposal.id} className="bg-[#0F1116] rounded-md p-3 flex items-center justify-between">
-                      <div>
-                        <div className="font-medium text-sm">{proposal.title}</div>
-                        <div className="text-xs text-gray-400 flex items-center gap-1 mt-1">
-                          <Clock className="w-3 h-3" /> {proposal.daysLeft} days left
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {trendingContent.map((item) => (
+                    <div
+                      key={item.id}
+                      className="bg-[#161921] rounded-md overflow-hidden border border-gray-800 hover:border-gray-700 transition-all hover:shadow-glow-sm cursor-pointer"
+                      onClick={() => handleContentClick(item)}
+                    >
+                      <div className="relative h-48 bg-gradient-to-br from-[#0F1116] to-[#161921] flex items-center justify-center">
+                        {item.thumbnailUrl ? (
+                          <img
+                            src={item.thumbnailUrl || "/placeholder.svg"}
+                            alt={item.title}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          getContentTypeIcon(item.type)
+                        )}
+                        <div className="absolute bottom-2 right-2 bg-black/80 text-white text-xs px-1.5 py-0.5 rounded-md flex items-center gap-1">
+                          {item.duration || item.readTime || item.chapters}
+                        </div>
+                        <div className="absolute top-2 right-2 bg-black/80 text-white text-xs px-1.5 py-0.5 rounded-md flex items-center gap-1">
+                          {getSmallContentTypeIcon(item.type)}
+                          <span className="capitalize">{item.type}</span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <div className="text-xs text-gray-400">{proposal.votes} votes</div>
-                        <button className="bg-[#FF3366] text-white text-xs px-2 py-1 rounded">Vote</button>
+                      <div className="p-3">
+                        <h4 className="font-medium text-sm mb-1 line-clamp-2">{item.title}</h4>
+                        <div className="flex justify-between items-center">
+                          <p className="text-gray-400 text-xs">{item.creatorName}</p>
+                          <div className="flex items-center text-gray-400 text-xs">
+                            <span>{formatNumber(item.views)} views</span>
+                            <span className="mx-1">•</span>
+                            <span>{formatTimeAgo(item.createdAt)}</span>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -524,94 +631,98 @@ const UserFeed: React.FC = () => {
               </div>
             )}
 
-            {/* Content grid - All types */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {filteredContent.map((item) => (
-                <div key={item.id} className="flex flex-col">
-                  {/* Thumbnail with appropriate indicators for each content type */}
-                  <div className="relative aspect-video bg-[#161921] rounded-md overflow-hidden mb-2">
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      {getContentTypeIcon(item.type)}
+            {/* Content grid - All types with dashboard styling */}
+            {filteredContent.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {filteredContent.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex flex-col bg-[#161921] rounded-md border border-gray-800 overflow-hidden hover:border-gray-700 transition-all hover:shadow-glow-sm cursor-pointer"
+                    onClick={() => handleContentClick(item)}
+                  >
+                    {/* Thumbnail with appropriate indicators for each content type */}
+                    <div className="relative h-40 bg-gradient-to-br from-[#0F1116] to-[#161921] flex items-center justify-center">
+                      {item.thumbnailUrl ? (
+                        <img
+                          src={item.thumbnailUrl || "/placeholder.svg"}
+                          alt={item.title}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        getContentTypeIcon(item.type)
+                      )}
+
+                      {/* Content type specific indicators */}
+                      {(item.duration || item.readTime || item.chapters) && (
+                        <div className="absolute bottom-2 right-2 bg-black/80 text-white text-xs px-1.5 py-0.5 rounded-md flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {item.duration || item.readTime || item.chapters}
+                        </div>
+                      )}
+
+                      {/* Content tier badge */}
+                      {item.accessType === "PAID" && (
+                        <div className="absolute top-2 left-2 bg-gradient-to-r from-[#FF3366] to-[#FF6699] text-white text-xs px-1.5 py-0.5 rounded-md shadow-glow-sm">
+                          PREMIUM
+                        </div>
+                      )}
+
+                      {/* Content type badge */}
+                      <div className="absolute top-2 right-2 bg-black/80 text-white text-xs px-1.5 py-0.5 rounded-md flex items-center gap-1">
+                        {getSmallContentTypeIcon(item.type)}
+                        <span className="capitalize">{item.type}</span>
+                      </div>
                     </div>
 
-                    {/* Content type specific indicators */}
-                    {item.type === "video" && (
-                      <div className="absolute bottom-2 right-2 bg-black/80 text-white text-xs px-1 py-0.5 rounded">
-                        {item.duration}
+                    {/* Content info */}
+                    <div className="flex p-3">
+                      {/* Creator avatar */}
+                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#FF3366]/20 to-[#FF3366]/5 flex-shrink-0 flex items-center justify-center mr-3 shadow-glow-sm">
+                        <Users className="w-4 h-4 text-[#FF3366]" />
                       </div>
-                    )}
 
-                    {item.type === "article" && (
-                      <div className="absolute bottom-2 right-2 bg-black/80 text-white text-xs px-1 py-0.5 rounded">
-                        {item.readTime}
+                      {/* Content details */}
+                      <div className="flex-1">
+                        <h3 className="font-medium text-sm mb-1 line-clamp-2">{item.title}</h3>
+                        <p className="text-gray-400 text-xs mb-1">{item.creatorName}</p>
+                        <div className="flex items-center text-gray-400 text-xs">
+                          <span>{formatNumber(item.views)} views</span>
+                          <span className="mx-1">•</span>
+                          <span>{formatTimeAgo(item.createdAt)}</span>
+                        </div>
                       </div>
-                    )}
 
-                    {item.type === "podcast" && (
-                      <div className="absolute bottom-2 right-2 bg-black/80 text-white text-xs px-1 py-0.5 rounded">
-                        {item.duration}
-                      </div>
-                    )}
-
-                    {item.type === "guide" && (
-                      <div className="absolute bottom-2 right-2 bg-black/80 text-white text-xs px-1 py-0.5 rounded">
-                        {item.chapters}
-                      </div>
-                    )}
-
-                    {/* Content tier badge */}
-                    {item.tier === "Premium" && (
-                      <div className="absolute top-2 left-2 bg-[#FF3366] text-white text-xs px-1.5 py-0.5 rounded">
-                        PREMIUM
-                      </div>
-                    )}
-
-                    {/* Content type badge */}
-                    <div className="absolute top-2 right-2 bg-black/80 text-white text-xs px-1.5 py-0.5 rounded flex items-center gap-1">
-                      {item.type === "video" && <Video className="w-3 h-3" />}
-                      {item.type === "article" && <FileText className="w-3 h-3" />}
-                      {item.type === "podcast" && <Headphones className="w-3 h-3" />}
-                      {item.type === "guide" && <BookOpen className="w-3 h-3" />}
-                      <span className="capitalize">{item.type}</span>
+                      {/* Options button */}
+                      <button className="p-1 text-gray-400 hover:text-white transition-colors">
+                        <MoreVertical className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
-
-                  {/* Content info */}
-                  <div className="flex">
-                    {/* Creator avatar */}
-                    <div className="w-9 h-9 rounded-full bg-[#FF3366]/10 flex-shrink-0 flex items-center justify-center mr-3">
-                      <Users className="w-4 h-4 text-[#FF3366]" />
-                    </div>
-
-                    {/* Content details */}
-                    <div className="flex-1">
-                      <h3 className="font-medium text-sm mb-1 line-clamp-2">{item.title}</h3>
-                      <p className="text-gray-400 text-xs mb-1">{item.creator}</p>
-                      <div className="flex items-center text-gray-400 text-xs">
-                        <span>{item.views} views</span>
-                        <span className="mx-1">•</span>
-                        <span>{item.timeAgo}</span>
-                      </div>
-                    </div>
-
-                    {/* Options button */}
-                    <button className="p-1 text-gray-400 hover:text-white">
-                      <MoreVertical className="w-4 h-4" />
-                    </button>
-                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#FF3366]/20 to-[#FF3366]/5 mx-auto flex items-center justify-center mb-4">
+                  <FileText className="w-8 h-8 text-[#FF3366]" />
                 </div>
-              ))}
-            </div>
+                <h3 className="text-lg font-medium mb-2">No content found</h3>
+                <p className="text-gray-400 mb-4">
+                  {activeCategory === "all"
+                    ? "No content available at the moment."
+                    : `No ${activeCategory} content found.`}
+                </p>
+              </div>
+            )}
           </div>
         </main>
       </div>
 
-      {/* Mobile bottom navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-[#0A0A0B] border-t border-gray-800 lg:hidden z-50">
+      {/* Mobile bottom navigation with dashboard styling */}
+      <div className="fixed bottom-0 left-0 right-0 bg-[#0A0A0B]/90 backdrop-blur-md border-t border-gray-800 lg:hidden z-50 shadow-lg">
         <div className="grid grid-cols-5 gap-1 p-2">
           <button
-            className={`flex flex-col items-center justify-center p-2 rounded-md ${
-              activeTab === "home" ? "text-white" : "text-gray-400"
+            className={`flex flex-col items-center justify-center p-2 rounded-md transition-colors ${
+              activeTab === "home" ? "text-[#FF3366]" : "text-gray-400 hover:text-gray-300"
             }`}
             onClick={() => setActiveTab("home")}
           >
@@ -620,8 +731,8 @@ const UserFeed: React.FC = () => {
           </button>
 
           <button
-            className={`flex flex-col items-center justify-center p-2 rounded-md ${
-              activeTab === "trending" ? "text-white" : "text-gray-400"
+            className={`flex flex-col items-center justify-center p-2 rounded-md transition-colors ${
+              activeTab === "trending" ? "text-[#FF3366]" : "text-gray-400 hover:text-gray-300"
             }`}
             onClick={() => setActiveTab("trending")}
           >
@@ -629,16 +740,16 @@ const UserFeed: React.FC = () => {
             <span className="text-xs mt-1">Trending</span>
           </button>
 
-          <Link to="/dashboard" className="flex flex-col items-center justify-center p-2 rounded-md text-[#FF3366]">
-            <div className="w-10 h-10 bg-[#FF3366] rounded-full flex items-center justify-center -mt-5 border-4 border-[#0A0A0B]">
-              <LayoutDashboard className="w-5 h-5 text-white" />
+          <Link to="/apply" className="flex flex-col items-center justify-center p-2 rounded-md text-[#FF3366]">
+            <div className="w-10 h-10 bg-gradient-to-r from-[#FF3366] to-[#FF6699] rounded-full flex items-center justify-center -mt-5 border-4 border-[#0A0A0B] shadow-glow-sm">
+              <Plus className="w-5 h-5 text-white" />
             </div>
-            <span className="text-xs mt-1">Dashboard</span>
+            <span className="text-xs mt-1">Create</span>
           </Link>
 
           <button
-            className={`flex flex-col items-center justify-center p-2 rounded-md ${
-              activeTab === "subscriptions" ? "text-white" : "text-gray-400"
+            className={`flex flex-col items-center justify-center p-2 rounded-md transition-colors ${
+              activeTab === "subscriptions" ? "text-[#FF3366]" : "text-gray-400 hover:text-gray-300"
             }`}
             onClick={() => setActiveTab("subscriptions")}
           >
@@ -647,8 +758,8 @@ const UserFeed: React.FC = () => {
           </button>
 
           <button
-            className={`flex flex-col items-center justify-center p-2 rounded-md ${
-              activeTab === "library" ? "text-white" : "text-gray-400"
+            className={`flex flex-col items-center justify-center p-2 rounded-md transition-colors ${
+              activeTab === "library" ? "text-[#FF3366]" : "text-gray-400 hover:text-gray-300"
             }`}
             onClick={() => setActiveTab("library")}
           >
@@ -660,10 +771,87 @@ const UserFeed: React.FC = () => {
 
       {/* Overlay for mobile sidebar */}
       {sidebarOpen && (
-        <div className="fixed inset-0 bg-black/50 z-30 lg:hidden" onClick={() => setSidebarOpen(false)}></div>
+        <div
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-30 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        ></div>
+      )}
+
+      {/* Creator application modal with dashboard styling */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-br from-[#161921] to-[#0F1116] rounded-md max-w-md w-full p-6 relative border border-gray-800 shadow-glow-md">
+            <button
+              className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
+              onClick={() => setShowCreateModal(false)}
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-gradient-to-br from-[#FF3366]/20 to-[#FF3366]/5 rounded-full flex items-center justify-center mx-auto mb-4 shadow-glow-sm">
+                <Award className="w-8 h-8 text-[#FF3366]" />
+              </div>
+              <h3 className="text-xl font-bold mb-2 bg-gradient-to-r from-[#FF3366] to-[#FF6699] text-transparent bg-clip-text">
+                Become a Creator
+              </h3>
+              <p className="text-gray-400 text-sm">
+                Join our platform and start monetizing your content with crypto payments. No middlemen, just you and
+                your audience.
+              </p>
+            </div>
+
+            <div className="space-y-4 mb-6">
+              <div className="flex items-start gap-3">
+                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#FF3366]/20 to-[#FF3366]/5 flex items-center justify-center flex-shrink-0 mt-0.5 shadow-glow-sm">
+                  <span className="text-[#FF3366] text-sm">✓</span>
+                </div>
+                <p className="text-gray-300 text-sm">Keep up to 92% of your subscription revenue</p>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#FF3366]/20 to-[#FF3366]/5 flex items-center justify-center flex-shrink-0 mt-0.5 shadow-glow-sm">
+                  <span className="text-[#FF3366] text-sm">✓</span>
+                </div>
+                <p className="text-gray-300 text-sm">Full ownership of your content and subscriber relationships</p>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#FF3366]/20 to-[#FF3366]/5 flex items-center justify-center flex-shrink-0 mt-0.5 shadow-glow-sm">
+                  <span className="text-[#FF3366] text-sm">✓</span>
+                </div>
+                <p className="text-gray-300 text-sm">Automatic payments through secure smart contracts</p>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#FF3366]/20 to-[#FF3366]/5 flex items-center justify-center flex-shrink-0 mt-0.5 shadow-glow-sm">
+                  <span className="text-[#FF3366] text-sm">✓</span>
+                </div>
+                <p className="text-gray-300 text-sm">Create exclusive NFTs for your most dedicated fans</p>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <Link
+                to="/apply"
+                className="bg-gradient-to-r from-[#FF3366] to-[#FF6699] text-white font-medium rounded-md py-3 text-center hover:from-[#FF6699] hover:to-[#FF3366] transition-all shadow-glow-sm"
+                onClick={() => setShowCreateModal(false)}
+              >
+                Apply as Creator
+              </Link>
+
+              <button
+                className="bg-transparent border border-gray-700 text-white font-medium rounded-md py-3 hover:bg-white/5 transition-colors"
+                onClick={() => setShowCreateModal(false)}
+              >
+                Learn More
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
 }
 
-export default UserFeed
+export default Home

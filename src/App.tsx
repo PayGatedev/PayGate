@@ -24,6 +24,8 @@ import SettingsPage from "./pages/dashboard/settings/page"
 import WalletPage from "./pages/dashboard/wallet/page"
 import NotFound from "./pages/NotFound"
 import CreateContentPage from "./pages/dashboard/content/create/page"
+import UserContentPage from "./pages/ContentPage" 
+import NFTsPage from "./pages/dashboard/nfts/page"
 
 // Protected route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -48,7 +50,7 @@ const AppContent = () => {
               {/* Public routes */}
               <Route path="/" element={<Home />} />
               <Route path="/apply" element={<ApplyPage />} />
-
+              <Route path="/:contentType/:id" element={<UserContentPage />} />
               {/* Dashboard routes - protected */}
               <Route
                 path="/dashboard"
@@ -87,6 +89,14 @@ const AppContent = () => {
                 element={
                   <ProtectedRoute>
                     <EarningsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/dashboard/nfts"
+                element={
+                  <ProtectedRoute>
+                    <NFTsPage />
                   </ProtectedRoute>
                 }
               />

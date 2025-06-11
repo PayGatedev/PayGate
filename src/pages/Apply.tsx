@@ -46,7 +46,7 @@ const initialFormData: FormData = {
 }
 
 // API URL - would come from environment variables in a real app
-const API_URL = "http://localhost:3001/api"
+const API_URL = "https://paygate-dyof.onrender.com/api"
 
 const ApplyPage = () => {
   const wallet = useWallet()

@@ -18,6 +18,7 @@ import {
   Bell,
   HelpCircle,
   LogOut,
+  ImageIcon,
 } from "lucide-react"
 
 interface SidebarProps {
@@ -48,6 +49,11 @@ export function Sidebar({ className = "" }: SidebarProps) {
       name: "Earnings",
       href: "/dashboard/earnings",
       icon: <Coins className="w-5 h-5" />,
+    },
+    {
+      name: "NFTs",
+      href: "/dashboard/nfts",
+      icon: <ImageIcon className="w-5 h-5" />,
     },
     {
       name: "Collaborators",
