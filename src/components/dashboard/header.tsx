@@ -149,7 +149,7 @@ export function DashboardHeader() {
                 )}
               </>
             ) : (
-              <WalletButton size="sm" variant="primary" />
+              <WalletButton/>
             )}
           </div>
 

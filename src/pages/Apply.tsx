@@ -82,6 +82,7 @@ const ApplyPage = () => {
   ) => {
     setFormData((prev) => {
       const currentValues = prev[type]
+      // @ts-ignore
       if (currentValues.includes(value as any)) {
         return { ...prev, [type]: currentValues.filter((v) => v !== value) }
       } else {
@@ -110,9 +111,11 @@ const ApplyPage = () => {
         break
       case 3: // Content types and subscription models
         if (formData.contentTypes.length === 0) {
+          // @ts-ignore
           newErrors.contentTypes = "Select at least one content type"
         }
         if (formData.subscriptionModels.length === 0) {
+          // @ts-ignore
           newErrors.subscriptionModels = "Select at least one subscription model"
         }
         break

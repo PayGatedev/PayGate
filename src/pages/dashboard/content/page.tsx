@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, JSX } from "react"
 import { useNavigate } from "react-router-dom"
 import { useWallet } from "@solana/wallet-adapter-react"
 import { DashboardLayout } from "@/components/dashboard/layout"

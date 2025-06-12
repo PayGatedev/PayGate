@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import ConnectWalletButton from './wallet-button';
+import {WalletButton} from './wallet-button';
 
 const Header: React.FC = () => {
   return (
@@ -9,7 +9,7 @@ const Header: React.FC = () => {
       <div className="space-x-4">
         <Link to="/subscribe" className="hover:text-blue-500">Subscribe</Link>
         <Link to="/profile" className="hover:text-blue-500">Profile</Link>
-        <ConnectWalletButton />
+        <WalletButton />
       </div>
     </header>
   );
